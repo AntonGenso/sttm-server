@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv").config();
 
 const usersRouter = require("./routes/users");
+const documentsRouter = require("./routes/documents");
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users", usersRouter);
+app.use("/api/documents", documentsRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Router not found" });

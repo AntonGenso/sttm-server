@@ -21,6 +21,7 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "minio": "^8.0.7",
     "morgan": "^1.11.0",
     "mysql2": "^3.22.5"
   },
