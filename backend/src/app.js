@@ -1,20 +1,26 @@
 const express = require("express");
 require("dotenv").config();
+const cors = require("cors");
 
 const usersRouter = require("./routes/users");
 const documentsRouter = require("./routes/documents");
+const rolesRouter = require("./routes/roles");
+const missionsRouter = require("./routes/missions");
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
 app.get("/", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", message: "sttm-server" });
 });
 
-app.use("/api/users", usersRouter);
-app.use("/api/documents", documentsRouter);
+app.use("/users", usersRouter);
+app.use("/documents", documentsRouter);
+app.use("/roles", rolesRouter);
+app.use("/missions", missionsRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Router not found" });

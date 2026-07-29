@@ -16,7 +16,7 @@ const getUserById = async (id) => {
     if (rows.length === 0) {
       throw new Error("User not found");
     }
-    return rows[0];
+    return rows[0] ?? null;
   } catch (error) {
     console.error(error);
     throw new Error("Error fetching user by ID");

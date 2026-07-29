@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node index.js)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(curl -s -w \"\\\\n--- HTTP %{http_code}, time %{time_total}s ---\\\\n\" http://localhost:5000/api/documents)",
+      "Bash(curl -s --noproxy '*' -w \"\\\\n--- HTTP %{http_code}, time %{time_total}s ---\\\\n\" http://127.0.0.1:5000/api/documents)",
+      "Bash(timeout 8 bash -c 'cat < /dev/null > /dev/tcp/94.141.81.82/9000')",
+      "Bash(pkill -f \"node /home/gilmalf/practice/sttm-server/backend/index.js\")",
+      "Bash(docker version *)",
+      "Bash(docker compose *)",
+      "Bash(pkill -9 -f \"backend/index.js\")",
+      "Bash(echo \"killed old \\(rc=$?\\)\")",
+      "Bash(echo \"exit-marker-$?\")",
+      "Bash(kill -9 68280)",
+      "Bash(pkill -9 -f \"/home/gilmalf/practice/sttm-server/backend/index.js\")",
+      "Bash(echo \"marker-$?\")",
+      "Bash(curl -s --noproxy '*' -m 25 -w \"\\\\nHTTP %{http_code}, time %{time_total}s\\\\n\" http://127.0.0.1:5001/api/documents)"
+    ]
+  }
+}
