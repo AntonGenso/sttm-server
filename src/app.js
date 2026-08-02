@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
 
+const authRouter = require("./routes/auth");
 const usersRouter = require("./routes/users");
 const documentsRouter = require("./routes/documents");
 const rolesRouter = require("./routes/roles");
@@ -17,6 +18,7 @@ app.get("/", (req, res) => {
   res.json({ status: "ok", message: "sttm-server" });
 });
 
+app.use("/auth", authRouter);
 app.use("/users", usersRouter);
 app.use("/documents", documentsRouter);
 app.use("/roles", rolesRouter);
