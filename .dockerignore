@@ -1,0 +1,20 @@
+# Rebuilt inside the image, and the host copy may be built for another platform.
+node_modules
+
+# History and CI config have no business in a runtime image.
+.git
+.gitignore
+.github
+
+# Secrets live on the server, in the .env next to docker-compose.prod.yml.
+.env
+.env.*
+
+Dockerfile*
+docker-compose*.yml
+
+*.log
+npm-debug.log*
+.DS_Store
+.vscode
+.idea

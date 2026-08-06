@@ -1,0 +1,86 @@
+name: Package build
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and push Docker image to ghcr.io
+    permissions:
+      contents: read
+      packages: write
+    environment:
+      name: production
+      url: https://steptothemoon.uz/api
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ github.ref_name }}
+
+      # No build-args: the app reads its configuration at runtime, and anything
+      # baked in at build time would end up readable in the published layers.
+      # Secrets live in ~/sttm/.env on the production server.
+      - name: Build and push Docker image to ghcr.io
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Its own directory: ~/sttm belongs to the student frontend, and two
+      # stacks sharing a directory share a compose project — `--remove-orphans`
+      # in one would tear down the containers of the other.
+      - name: Copy compose file to production server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: docker-compose.prod.yml
+          target: ~/sttm-server
+
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: GHCR_TOKEN,GITHUB_ACTOR,GITHUB_REPOSITORY
+          script: |
+            set -e
+            echo $GHCR_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+            cd ~/sttm-server
+            # ghcr.io rejects uppercase in image names.
+            export GITHUB_REPOSITORY=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+            docker image prune -f

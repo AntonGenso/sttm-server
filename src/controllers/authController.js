@@ -1,31 +1,43 @@
 const jwt = require("jsonwebtoken");
 const services = require("../services/authService");
+const { validatePassword } = require("../utils/password");
+const { normalizePhone, PHONE_ERROR } = require("../utils/phone");
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 const signToken = (user) =>
-  jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  });
+  jwt.sign(
+    { sub: user.id, name: user.name, roles: user.roles ?? [] },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN },
+  );
 
 const register = async (req, res) => {
   try {
-    const { name, password } = req.body;
+    const { name, phone, password } = req.body;
 
-    if (!name || !password) {
+    if (!name || !phone || !password) {
       return res
         .status(400)
-        .json({ message: "Name and password are required" });
+        .json({ message: "Name, phone and password are required" });
     }
 
-    if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters long" });
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return res.status(400).json({ message: PHONE_ERROR });
     }
 
-    const user = await services.registerUser(name.trim(), password);
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
+    const user = await services.registerUser(
+      name.trim(),
+      normalizedPhone,
+      password,
+    );
     const token = signToken(user);
 
     res.status(201).json({ user, token });

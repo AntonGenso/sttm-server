@@ -7,6 +7,10 @@ const usersRouter = require("./routes/users");
 const documentsRouter = require("./routes/documents");
 const rolesRouter = require("./routes/roles");
 const missionsRouter = require("./routes/missions");
+const citiesRouter = require("./routes/cities");
+const schoolsRouter = require("./routes/schools");
+const classesRouter = require("./routes/classes");
+const statsRouter = require("./routes/stats");
 
 const app = express();
 
@@ -23,6 +27,10 @@ app.use("/users", usersRouter);
 app.use("/documents", documentsRouter);
 app.use("/roles", rolesRouter);
 app.use("/missions", missionsRouter);
+app.use("/cities", citiesRouter);
+app.use("/schools", schoolsRouter);
+app.use("/classes", classesRouter);
+app.use("/stats", statsRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Router not found" });

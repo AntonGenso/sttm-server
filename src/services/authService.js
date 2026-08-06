@@ -1,14 +1,20 @@
 const bcrypt = require("bcryptjs");
 const pool = require("../config/db");
+const rolesService = require("./rolesService");
 
 const SALT_ROUNDS = 10;
+
+// Every account created through sttm-admin starts as a teacher; admin/student
+// roles are granted afterwards through the roles management.
+const DEFAULT_ROLE_NAME = "teacher";
+const DEFAULT_ROLE_LABEL = "Teacher";
 
 const findUserByName = async (name) => {
   const [rows] = await pool.query("SELECT * FROM users WHERE name = ?", [name]);
   return rows[0] ?? null;
 };
 
-const registerUser = async (name, password) => {
+const registerUser = async (name, phone, password) => {
   const existing = await findUserByName(name);
   if (existing) {
     const error = new Error("User with this name already exists");
@@ -18,12 +24,39 @@ const registerUser = async (name, password) => {
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const [result] = await pool.query(
-    "INSERT INTO users (name, password) VALUES (?, ?)",
-    [name, passwordHash],
-  );
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
 
-  return { id: result.insertId, name };
+    const [result] = await connection.query(
+      "INSERT INTO users (name, phone, password) VALUES (?, ?, ?)",
+      [name, phone, passwordHash],
+    );
+
+    const role = await rolesService.getOrCreateRoleByName(
+      DEFAULT_ROLE_NAME,
+      DEFAULT_ROLE_LABEL,
+      connection,
+    );
+    await rolesService.assignRoleToUser(result.insertId, role.id, connection);
+
+    await connection.commit();
+
+    return { id: result.insertId, name, phone, roles: [role.name] };
+  } catch (error) {
+    await connection.rollback();
+
+    // Two parallel registrations with the same name: the unique index wins.
+    if (error.code === "ER_DUP_ENTRY") {
+      const conflict = new Error("User with this name already exists");
+      conflict.status = 409;
+      throw conflict;
+    }
+
+    throw error;
+  } finally {
+    connection.release();
+  }
 };
 
 const loginUser = async (name, password) => {
@@ -41,11 +74,14 @@ const loginUser = async (name, password) => {
     throw error;
   }
 
-  return { id: user.id, name: user.name };
+  const roles = await rolesService.getUserRoleNames(user.id);
+
+  return { id: user.id, name: user.name, phone: user.phone ?? null, roles };
 };
 
 module.exports = {
   findUserByName,
   registerUser,
   loginUser,
+  DEFAULT_ROLE_NAME,
 };
