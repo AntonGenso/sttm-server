@@ -19,6 +19,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # Fails in seconds instead of after the image build, and names the secret
+      # that is missing — the actions themselves only report "can't connect".
+      - name: Check deployment secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          missing=""
+          for name in SSH_HOST SSH_USER SSH_PRIVATE_KEY; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing or empty secrets:$missing — add them under Settings → Secrets and variables → Actions, or to the 'production' environment used by this job."
+            exit 1
+          fi
+          case "$SSH_PRIVATE_KEY" in
+            *"PRIVATE KEY"*) ;;
+            *) echo "::error::SSH_PRIVATE_KEY does not look like a private key: it must include the -----BEGIN ... PRIVATE KEY----- and -----END ...----- lines."; exit 1 ;;
+          esac
+          echo "Deployment secrets are present."
+
       # The default buildx driver ("docker") cannot export a cache; this swaps
       # in the docker-container driver, which is what `type=gha` needs.
       - name: Set up Docker Buildx
@@ -43,7 +65,7 @@ jobs:
 
       # No build-args: the app reads its configuration at runtime, and anything
       # baked in at build time would end up readable in the published layers.
-      # Secrets live in ~/sttm/.env on the production server.
+      # Secrets live in ~/sttm-server/.env on the production server.
       - name: Build and push Docker image to ghcr.io
         uses: docker/build-push-action@v6
         with:
@@ -64,7 +86,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          port: ${{ secrets.SSH_PORT || 22 }}
           source: docker-compose.prod.yml
           target: ~/sttm-server
 
@@ -78,7 +100,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
+          port: ${{ secrets.SSH_PORT || 22 }}
           envs: GHCR_TOKEN,GITHUB_ACTOR,GITHUB_REPOSITORY
           script: |
             set -e
