@@ -1,11 +1,10 @@
 #!/bin/sh
 #
-# Pull-based deploy, run from cron on the production server:
+# Manual deploy, for when you want to roll out without pushing to main — or
+# when GitHub Actions is unavailable. The pipeline normally does this itself
+# over ssh at the end of .github/workflows/build.yaml.
 #
-#   */2 * * * * flock -n /tmp/sttm-deploy.lock /home/sttm/sttm-server/scripts/deploy.sh >> /home/sttm/sttm-server/deploy.log 2>&1
-#
-# CI only builds the image and pushes it to ghcr — port 22 is closed, so
-# nothing reaches in from outside. This is the other half of the deploy.
+#   cd ~/sttm-server && ./scripts/deploy.sh
 set -e
 
 # The compose file and .env live one level up, next to this script's directory.

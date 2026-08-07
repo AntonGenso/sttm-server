@@ -5,9 +5,6 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-# The pipeline stops at ghcr: port 22 is firewalled off, so the production
-# server pulls the new image itself (see scripts/deploy.sh, run from cron).
-# Nothing here needs credentials for the server.
 jobs:
   deploy:
     name: Build and push Docker image to ghcr.io
@@ -21,6 +18,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      # Fails in seconds instead of after the image build, and names the secret
+      # that is missing — the ssh actions themselves only report "can't connect".
+      - name: Check deployment secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          missing=""
+          for name in SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing or empty secrets:$missing — add them under Settings → Secrets and variables → Actions. SSH_PORT is the port the server is reachable on from outside, which is not the port sshd binds to locally."
+            exit 1
+          fi
+          case "$SSH_PRIVATE_KEY" in
+            *"PRIVATE KEY"*) ;;
+            *) echo "::error::SSH_PRIVATE_KEY does not look like a private key: it must include the -----BEGIN ... PRIVATE KEY----- and -----END ...----- lines."; exit 1 ;;
+          esac
+          echo "Deployment secrets are present."
 
       # The default buildx driver ("docker") cannot export a cache; this swaps
       # in the docker-container driver, which is what `type=gha` needs.
@@ -57,3 +77,39 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Its own directory: ~/sttm belongs to the student frontend, and two
+      # stacks sharing a directory share a compose project — `--remove-orphans`
+      # in one would tear down the containers of the other.
+      - name: Copy compose file to production server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: docker-compose.prod.yml
+          target: ~/sttm-server
+
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: GHCR_TOKEN,GITHUB_ACTOR,GITHUB_REPOSITORY
+          script: |
+            set -e
+            echo $GHCR_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+            cd ~/sttm-server
+            # ghcr.io rejects uppercase in image names.
+            export GITHUB_REPOSITORY=$(echo $GITHUB_REPOSITORY | tr '[:upper:]' '[:lower:]')
+            docker compose -f docker-compose.prod.yml pull
+            # No --force-recreate: compose recreates only when the digest changed.
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
