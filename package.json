@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "seed:cities": "node scripts/seedCities.js"
+    "seed:cities": "node scripts/seedCities.js",
+    "seed:game": "node scripts/seedGameCatalog.js"
   },
   "repository": {
     "type": "git",
