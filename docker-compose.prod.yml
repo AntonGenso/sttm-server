@@ -32,4 +32,10 @@ services:
       - prod
 
 networks:
+  # Shared with the sttm-frontend stack, which reaches this container as
+  # http://sttm_backend_prod:5000. Must be `external`: a network declared by a
+  # compose project is namespaced to it, so each stack would otherwise sit on
+  # its own isolated bridge. Created by the deploy workflow if missing.
   prod:
+    external: true
+    name: sttm_prod
