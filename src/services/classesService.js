@@ -235,17 +235,101 @@ const joinClassByInviteCode = async (studentId, code) => {
   return found;
 };
 
+/**
+ * The class roster in leaderboard order. The game profile is joined in with a
+ * LEFT JOIN: a student who joined by code but never opened the game has no
+ * `game_profiles` row yet, and must still show up on the roster with zeros.
+ */
 const getClassStudents = async (classId) => {
   const [rows] = await pool.query(
-    `SELECT u.id, u.name, u.phone, cs.status, cs.joined_at
+    `SELECT u.id,
+            u.name,
+            u.phone,
+            cs.status,
+            cs.joined_at,
+            COALESCE(gp.head_id, 0) AS head_id,
+            COALESCE(gp.suit_id, 0) AS suit_id,
+            COALESCE(gp.stars, 0)   AS stars,
+            COALESCE(gp.score, 0)   AS score,
+            COALESCE(gp.total, 0)   AS total
        FROM class_students cs
        JOIN users u ON u.id = cs.student_id
+       LEFT JOIN game_profiles gp ON gp.user_id = u.id
       WHERE cs.class_id = ?
         AND cs.status <> 'removed'
-      ORDER BY u.name`,
+      ORDER BY total DESC, u.name ASC`,
     [classId],
   );
   return rows;
+};
+
+/**
+ * One student of the class, with their standing inside it.
+ *
+ * `class_rank` follows the same tie rule as the leaderboard: it counts how many
+ * classmates are strictly above, so two students on the same total share a rank
+ * and the next one skips a place. (`rank` itself is reserved in MySQL 8.)
+ */
+const getClassStudent = async (classId, studentId) => {
+  const [rows] = await pool.query(
+    `SELECT u.id,
+            u.name,
+            u.phone,
+            cs.status,
+            cs.joined_at,
+            COALESCE(gp.head_id, 0) AS head_id,
+            COALESCE(gp.suit_id, 0) AS suit_id,
+            COALESCE(gp.stars, 0)   AS stars,
+            COALESCE(gp.score, 0)   AS score,
+            COALESCE(gp.total, 0)   AS total,
+            (SELECT COUNT(*) + 1
+               FROM class_students peer
+               JOIN game_profiles pgp ON pgp.user_id = peer.student_id
+              WHERE peer.class_id = cs.class_id
+                AND peer.status <> 'removed'
+                AND pgp.total > COALESCE(gp.total, 0)) AS class_rank
+       FROM class_students cs
+       JOIN users u ON u.id = cs.student_id
+       LEFT JOIN game_profiles gp ON gp.user_id = u.id
+      WHERE cs.class_id = ?
+        AND cs.student_id = ?
+        AND cs.status <> 'removed'`,
+    [classId, studentId],
+  );
+
+  const student = rows[0];
+  if (!student) {
+    const error = new Error("Student not found in this class");
+    error.status = 404;
+    throw error;
+  }
+  return student;
+};
+
+/**
+ * Takes the student out of the class.
+ *
+ * The membership row is marked `removed`, not deleted: everything the student
+ * earned lives in `game_profiles` / `student_missions` / `student_tests` keyed
+ * by user id, so it survives untouched — they simply stop belonging to this
+ * class. Joining again (here or with another class's code) flips the row back
+ * to `active` through the existing ON DUPLICATE KEY path.
+ */
+const removeStudentFromClass = async (classId, studentId) => {
+  const [result] = await pool.query(
+    `UPDATE class_students
+        SET status = 'removed'
+      WHERE class_id = ?
+        AND student_id = ?
+        AND status <> 'removed'`,
+    [classId, studentId],
+  );
+
+  if (!result.affectedRows) {
+    const error = new Error("Student not found in this class");
+    error.status = 404;
+    throw error;
+  }
 };
 
 module.exports = {
@@ -257,4 +341,6 @@ module.exports = {
   findClassByInviteCode,
   joinClassByInviteCode,
   getClassStudents,
+  getClassStudent,
+  removeStudentFromClass,
 };

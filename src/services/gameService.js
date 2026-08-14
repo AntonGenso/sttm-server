@@ -143,6 +143,79 @@ const getGameProfile = async (userId) => {
   };
 };
 
+/** How many recent attempts the student card shows. */
+const ATTEMPTS_LIMIT = 20;
+
+/**
+ * The teacher-facing report on one student.
+ *
+ * Unlike `getGameProfile`, this walks the catalog and not the progress rows:
+ * every mission and test is listed, untouched ones included, because "never
+ * started" is exactly what a teacher is looking for. Access is checked by the
+ * caller — this service only knows the user id.
+ */
+const getStudentReport = async (userId) => {
+  await ensureProfile(userId);
+
+  const [[profile]] = await pool.query(
+    `SELECT head_id, suit_id, stars, score, total
+       FROM game_profiles WHERE user_id = ?`,
+    [userId],
+  );
+
+  const [missions] = await pool.query(
+    `SELECT m.id, m.name, m.label, m.xp, m.type,
+            COALESCE(sm.status, 'open') AS status,
+            COALESCE(sm.best_score, 0)  AS best_score,
+            COALESCE(sm.attempts, 0)    AS attempts,
+            sm.started_at, sm.completed_at
+       FROM missions m
+       LEFT JOIN student_missions sm
+              ON sm.mission_id = m.id AND sm.user_id = ?
+      ORDER BY m.id`,
+    [userId],
+  );
+
+  const [tests] = await pool.query(
+    `SELECT t.id, t.name, t.label, t.xp, t.question_count,
+            COALESCE(st.status, 'open') AS status,
+            COALESCE(st.best_score, 0)  AS best_score,
+            COALESCE(st.attempts, 0)    AS attempts,
+            st.started_at, st.completed_at
+       FROM tests t
+       LEFT JOIN student_tests st
+              ON st.test_id = t.id AND st.user_id = ?
+      ORDER BY t.id`,
+    [userId],
+  );
+
+  // `kind` decides which catalog the item id points at, so both are joined and
+  // only one of them ever matches.
+  const [attempts] = await pool.query(
+    `SELECT ga.id, ga.kind, ga.item_id, ga.score, ga.started_at, ga.finished_at,
+            COALESCE(m.label, m.name, t.label, t.name) AS item_label
+       FROM game_attempts ga
+       LEFT JOIN missions m ON ga.kind = 'mission' AND m.id = ga.item_id
+       LEFT JOIN tests    t ON ga.kind = 'test'    AND t.id = ga.item_id
+      WHERE ga.user_id = ?
+      ORDER BY ga.id DESC
+      LIMIT ?`,
+    [userId, ATTEMPTS_LIMIT],
+  );
+
+  return {
+    skin: { headId: profile.head_id, suitId: profile.suit_id },
+    leaderboard: {
+      stars: profile.stars,
+      score: profile.score,
+      total: profile.total,
+    },
+    missions,
+    tests,
+    attempts,
+  };
+};
+
 /* ───────────────────────── Totals ───────────────────────── */
 
 /**
@@ -340,6 +413,7 @@ const getLeaderboard = async ({ classId = null, limit = 100 } = {}) => {
 module.exports = {
   registerStudent,
   getGameProfile,
+  getStudentReport,
   startItem,
   submitItem,
   updateSkin,
