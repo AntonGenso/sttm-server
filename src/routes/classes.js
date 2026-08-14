@@ -19,6 +19,16 @@ router.get(
   requireRole("teacher", "admin"),
   classesController.getStudents,
 );
+router.get(
+  "/:id/students/:studentId",
+  requireRole("teacher", "admin"),
+  classesController.getStudent,
+);
+router.delete(
+  "/:id/students/:studentId",
+  requireRole("teacher", "admin"),
+  classesController.removeStudent,
+);
 router.post(
   "/:id/code",
   requireRole("teacher", "admin"),

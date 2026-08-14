@@ -1,4 +1,5 @@
 const services = require("../services/classesService");
+const gameService = require("../services/gameService");
 const {
   GRADE_MIN,
   GRADE_MAX,
@@ -120,6 +121,60 @@ const getStudents = async (req, res) => {
   }
 };
 
+/**
+ * Everything the teacher can see about one student: their standing in the class
+ * plus the full game record. The class ownership check comes first, and the
+ * student is read through `class_students`, so a teacher can only ever open a
+ * student who is in a class of theirs.
+ */
+const getStudent = async (req, res) => {
+  try {
+    const classId = Number(req.params.id);
+    const studentId = Number(req.params.studentId);
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      return res.status(400).json({ message: "Invalid student id" });
+    }
+
+    await services.getTeacherClass(req.user.id, classId);
+    const student = await services.getClassStudent(classId, studentId);
+    const game = await gameService.getStudentReport(studentId);
+
+    res.json({ ...student, ...game });
+  } catch (error) {
+    console.error(error);
+    if (error.status) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Error fetching student" });
+  }
+};
+
+/**
+ * Removes the student from the class — for the one who entered the wrong code,
+ * or who moved on to another class. Their progress is untouched; they are just
+ * no longer in this class, and can join another one with its code.
+ */
+const removeStudent = async (req, res) => {
+  try {
+    const classId = Number(req.params.id);
+    const studentId = Number(req.params.studentId);
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      return res.status(400).json({ message: "Invalid student id" });
+    }
+
+    await services.getTeacherClass(req.user.id, classId);
+    await services.removeStudentFromClass(classId, studentId);
+
+    res.json({ id: studentId, status: "removed" });
+  } catch (error) {
+    console.error(error);
+    if (error.status) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Error removing the student" });
+  }
+};
+
 /** Lets a student check a code before committing to it. */
 const lookupByCode = async (req, res) => {
   try {
@@ -170,6 +225,8 @@ module.exports = {
   getClass,
   rotateCode,
   getStudents,
+  getStudent,
+  removeStudent,
   lookupByCode,
   joinByCode,
 };
