@@ -67,8 +67,8 @@ const getMission = async (req, res) => {
 };
 
 /**
- * Multipart: text fields alongside the cover, the student documents and the
- * teacher guides. Everything except the name is optional.
+ * Multipart: text fields alongside the cover, the video, the student documents
+ * and the teacher guides. Everything except the name is optional.
  */
 const createMission = async (req, res) => {
   try {
@@ -102,13 +102,6 @@ const createMission = async (req, res) => {
       return res.status(400).json({ message: "Game link must be a valid URL" });
     }
 
-    const videoLink = parseLink(req.body.videoLink);
-    if (videoLink === false) {
-      return res
-        .status(400)
-        .json({ message: "Video link must be a valid URL" });
-    }
-
     const files = collectFiles(req);
 
     const result = await services.createNewMission({
@@ -117,7 +110,6 @@ const createMission = async (req, res) => {
       xp,
       type,
       gameLink,
-      videoLink,
       files,
     });
 
@@ -133,6 +125,7 @@ const createMission = async (req, res) => {
 
 const ASSET_FIELDS = [
   "cover",
+  "video",
   "documentRu",
   "documentUz",
   "teacherGuideRu",
@@ -142,7 +135,7 @@ const ASSET_FIELDS = [
 /**
  * Partial update: only the fields present in the request are touched. A file
  * replaces the stored one, a name listed in `remove` clears it, and an empty
- * `gameLink` / `videoLink` clears the link.
+ * `gameLink` clears the link.
  */
 const updateMission = async (req, res) => {
   try {
@@ -183,16 +176,6 @@ const updateMission = async (req, res) => {
           .json({ message: "Game link must be a valid URL" });
       }
       fields.gameLink = gameLink;
-    }
-
-    if (req.body.videoLink !== undefined) {
-      const videoLink = parseLink(req.body.videoLink);
-      if (videoLink === false) {
-        return res
-          .status(400)
-          .json({ message: "Video link must be a valid URL" });
-      }
-      fields.videoLink = videoLink;
     }
 
     const remove = collectRemovals(req.body.remove);
