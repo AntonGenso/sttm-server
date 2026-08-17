@@ -4,6 +4,7 @@ const storageService = require("./storageService");
 /** Uploaded file → the `mission_info` columns that store it. */
 const ASSET_COLUMNS = {
   cover: { key: "cover_key", name: null, kind: "cover" },
+  video: { key: "video_key", name: "video_name", kind: "video" },
   documentRu: {
     key: "document_link_ru",
     name: "document_name_ru",
@@ -34,15 +35,16 @@ const getMissions = async () => {
   try {
     const [rows] = await pool.query(
       `SELECT m.id, m.name, m.label, m.xp, m.type, m.created_at,
-              mi.cover_key, mi.game_link, mi.video_link
+              mi.cover_key, mi.video_key, mi.game_link
          FROM missions m
          LEFT JOIN mission_info mi ON mi.mission_id = m.id
         ORDER BY m.id`,
     );
 
-    return rows.map(({ cover_key, ...mission }) => ({
+    return rows.map(({ cover_key, video_key, ...mission }) => ({
       ...mission,
       cover_url: storageService.getPublicUrl(cover_key),
+      video_url: storageService.getPublicUrl(video_key),
     }));
   } catch (error) {
     console.error(error);
@@ -57,7 +59,8 @@ const getMissions = async () => {
 const getMissionById = async (id) => {
   const [rows] = await pool.query(
     `SELECT m.id, m.name, m.label, m.xp, m.type, m.created_at, m.updated_at,
-            mi.game_link, mi.video_link, mi.cover_key,
+            mi.game_link, mi.cover_key,
+            mi.video_key, mi.video_name,
             mi.document_link_ru, mi.document_name_ru,
             mi.document_link_uz, mi.document_name_uz,
             mi.teacher_guide_ru, mi.teacher_guide_name_ru,
@@ -104,8 +107,9 @@ const getMissionById = async (id) => {
     created_at: mission.created_at,
     updated_at: mission.updated_at,
     game_link: mission.game_link,
-    video_link: mission.video_link,
     cover_url: storageService.getPublicUrl(mission.cover_key),
+    video_url: storageService.getPublicUrl(mission.video_key),
+    video_name: mission.video_name,
     documents: {
       ru: { url: documentRu, name: mission.document_name_ru },
       uz: { url: documentUz, name: mission.document_name_uz },
@@ -146,7 +150,6 @@ const createNewMission = async ({
   xp = 0,
   type = "current",
   gameLink = null,
-  videoLink = null,
   files = {},
 }) => {
   const connection = await pool.getConnection();
@@ -162,8 +165,8 @@ const createNewMission = async ({
     missionId = result.insertId;
 
     await connection.query(
-      "INSERT INTO mission_info (mission_id, game_link, video_link) VALUES (?, ?, ?)",
-      [missionId, gameLink, videoLink],
+      "INSERT INTO mission_info (mission_id, game_link) VALUES (?, ?)",
+      [missionId, gameLink],
     );
 
     await connection.commit();
@@ -269,7 +272,7 @@ const updateMission = async (missionId, { fields = {}, files = {}, remove = [] }
       );
     }
 
-    const infoColumns = { gameLink: "game_link", videoLink: "video_link" };
+    const infoColumns = { gameLink: "game_link" };
     const infoAssignments = Object.entries(infoColumns)
       .filter(([field]) => fields[field] !== undefined)
       .map(([field, column]) => ({ column, value: fields[field] }));
