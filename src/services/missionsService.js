@@ -4,7 +4,18 @@ const storageService = require("./storageService");
 /** Uploaded file → the `mission_info` columns that store it. */
 const ASSET_COLUMNS = {
   cover: { key: "cover_key", name: null, kind: "cover" },
-  video: { key: "video_key", name: "video_name", kind: "video" },
+  videoRu: {
+    key: "video_key_ru",
+    name: "video_name_ru",
+    kind: "video",
+    locale: "ru",
+  },
+  videoUz: {
+    key: "video_key_uz",
+    name: "video_name_uz",
+    kind: "video",
+    locale: "uz",
+  },
   documentRu: {
     key: "document_link_ru",
     name: "document_name_ru",
@@ -29,13 +40,27 @@ const ASSET_COLUMNS = {
     kind: "teacherGuide",
     locale: "uz",
   },
+  lessonNotesRu: {
+    key: "lesson_notes_ru",
+    name: "lesson_notes_name_ru",
+    kind: "lessonNotes",
+    locale: "ru",
+  },
+  lessonNotesUz: {
+    key: "lesson_notes_uz",
+    name: "lesson_notes_name_uz",
+    kind: "lessonNotes",
+    locale: "uz",
+  },
 };
 
 const getMissions = async () => {
   try {
     const [rows] = await pool.query(
       `SELECT m.id, m.name, m.label, m.xp, m.type, m.created_at,
-              mi.cover_key, mi.video_key, mi.game_link
+              mi.cover_key,
+              COALESCE(mi.video_key_ru, mi.video_key_uz, mi.video_key) AS video_key,
+              mi.game_link
          FROM missions m
          LEFT JOIN mission_info mi ON mi.mission_id = m.id
         ORDER BY m.id`,
@@ -59,12 +84,15 @@ const getMissions = async () => {
 const getMissionById = async (id) => {
   const [rows] = await pool.query(
     `SELECT m.id, m.name, m.label, m.xp, m.type, m.created_at, m.updated_at,
-            mi.game_link, mi.cover_key,
-            mi.video_key, mi.video_name,
+            mi.game_link, mi.bonus_xp, mi.cover_key,
+            mi.video_key_ru, mi.video_name_ru,
+            mi.video_key_uz, mi.video_name_uz,
             mi.document_link_ru, mi.document_name_ru,
             mi.document_link_uz, mi.document_name_uz,
             mi.teacher_guide_ru, mi.teacher_guide_name_ru,
-            mi.teacher_guide_uz, mi.teacher_guide_name_uz
+            mi.teacher_guide_uz, mi.teacher_guide_name_uz,
+            mi.lesson_notes_ru, mi.lesson_notes_name_ru,
+            mi.lesson_notes_uz, mi.lesson_notes_name_uz
        FROM missions m
        LEFT JOIN mission_info mi ON mi.mission_id = m.id
       WHERE m.id = ?`,
@@ -78,25 +106,39 @@ const getMissionById = async (id) => {
     throw error;
   }
 
-  const [documentRu, documentUz, teacherGuideRu, teacherGuideUz] =
-    await Promise.all([
-      storageService.getPrivateUrl(
-        mission.document_link_ru,
-        mission.document_name_ru,
-      ),
-      storageService.getPrivateUrl(
-        mission.document_link_uz,
-        mission.document_name_uz,
-      ),
-      storageService.getPrivateUrl(
-        mission.teacher_guide_ru,
-        mission.teacher_guide_name_ru,
-      ),
-      storageService.getPrivateUrl(
-        mission.teacher_guide_uz,
-        mission.teacher_guide_name_uz,
-      ),
-    ]);
+  const [
+    documentRu,
+    documentUz,
+    teacherGuideRu,
+    teacherGuideUz,
+    lessonNotesRu,
+    lessonNotesUz,
+  ] = await Promise.all([
+    storageService.getPrivateUrl(
+      mission.document_link_ru,
+      mission.document_name_ru,
+    ),
+    storageService.getPrivateUrl(
+      mission.document_link_uz,
+      mission.document_name_uz,
+    ),
+    storageService.getPrivateUrl(
+      mission.teacher_guide_ru,
+      mission.teacher_guide_name_ru,
+    ),
+    storageService.getPrivateUrl(
+      mission.teacher_guide_uz,
+      mission.teacher_guide_name_uz,
+    ),
+    storageService.getPrivateUrl(
+      mission.lesson_notes_ru,
+      mission.lesson_notes_name_ru,
+    ),
+    storageService.getPrivateUrl(
+      mission.lesson_notes_uz,
+      mission.lesson_notes_name_uz,
+    ),
+  ]);
 
   return {
     id: mission.id,
@@ -107,9 +149,20 @@ const getMissionById = async (id) => {
     created_at: mission.created_at,
     updated_at: mission.updated_at,
     game_link: mission.game_link,
+    // The bonus is «Инструкция для ученика» (documents) plus this reward; it
+    // exists when those files are present.
+    bonus_xp: mission.bonus_xp ?? 0,
     cover_url: storageService.getPublicUrl(mission.cover_key),
-    video_url: storageService.getPublicUrl(mission.video_key),
-    video_name: mission.video_name,
+    video: {
+      ru: {
+        url: storageService.getPublicUrl(mission.video_key_ru),
+        name: mission.video_name_ru,
+      },
+      uz: {
+        url: storageService.getPublicUrl(mission.video_key_uz),
+        name: mission.video_name_uz,
+      },
+    },
     documents: {
       ru: { url: documentRu, name: mission.document_name_ru },
       uz: { url: documentUz, name: mission.document_name_uz },
@@ -117,6 +170,10 @@ const getMissionById = async (id) => {
     teacher_guide: {
       ru: { url: teacherGuideRu, name: mission.teacher_guide_name_ru },
       uz: { url: teacherGuideUz, name: mission.teacher_guide_name_uz },
+    },
+    lesson_notes: {
+      ru: { url: lessonNotesRu, name: mission.lesson_notes_name_ru },
+      uz: { url: lessonNotesUz, name: mission.lesson_notes_name_uz },
     },
   };
 };
@@ -150,6 +207,7 @@ const createNewMission = async ({
   xp = 0,
   type = "current",
   gameLink = null,
+  bonusXp = 0,
   files = {},
 }) => {
   const connection = await pool.getConnection();
@@ -165,8 +223,8 @@ const createNewMission = async ({
     missionId = result.insertId;
 
     await connection.query(
-      "INSERT INTO mission_info (mission_id, game_link) VALUES (?, ?)",
-      [missionId, gameLink],
+      "INSERT INTO mission_info (mission_id, game_link, bonus_xp) VALUES (?, ?, ?)",
+      [missionId, gameLink, bonusXp],
     );
 
     await connection.commit();
@@ -253,6 +311,14 @@ const updateMission = async (missionId, { fields = {}, files = {}, remove = [] }
   // Also serves as the existence check for the whole operation.
   await getMissionById(missionId);
 
+  // Legacy missions (imported before mission_info existed) have no info row, so
+  // every `UPDATE mission_info` below would silently touch zero rows and the
+  // uploaded files would never be recorded. Guarantee the row up front.
+  await pool.query(
+    "INSERT IGNORE INTO mission_info (mission_id) VALUES (?)",
+    [missionId],
+  );
+
   const storedKeys = await getStoredKeys(missionId);
   const uploaded = [];
   const replaced = [];
@@ -272,7 +338,7 @@ const updateMission = async (missionId, { fields = {}, files = {}, remove = [] }
       );
     }
 
-    const infoColumns = { gameLink: "game_link" };
+    const infoColumns = { gameLink: "game_link", bonusXp: "bonus_xp" };
     const infoAssignments = Object.entries(infoColumns)
       .filter(([field]) => fields[field] !== undefined)
       .map(([field, column]) => ({ column, value: fields[field] }));

@@ -17,11 +17,16 @@ const PRIVATE_URL_TTL = 15 * 60;
  */
 const MISSION_ASSETS = {
   cover: { bucket: PUBLIC_BUCKET, folder: "cover", localized: false },
-  video: { bucket: PUBLIC_BUCKET, folder: "video", localized: false },
+  video: { bucket: PUBLIC_BUCKET, folder: "video", localized: true },
   material: { bucket: PRIVATE_BUCKET, folder: "materials", localized: true },
   teacherGuide: {
     bucket: PRIVATE_BUCKET,
     folder: "teacher-guide",
+    localized: true,
+  },
+  lessonNotes: {
+    bucket: PRIVATE_BUCKET,
+    folder: "lesson-notes",
     localized: true,
   },
 };
@@ -88,7 +93,11 @@ const getPublicUrl = (key) =>
 
 /**
  * Private objects are handed out as short-lived signed links. `originalName`
- * comes back as the download file name, which is why keys can stay ascii.
+ * comes back as the file name shown to the browser, which is why keys can stay
+ * ascii.
+ *
+ * The link opens the file inline — a PDF renders in a new browser tab rather
+ * than downloading — while still carrying the original name for a manual save.
  */
 const getPrivateUrl = async (key, originalName) => {
   if (!key) {
@@ -99,7 +108,7 @@ const getPrivateUrl = async (key, originalName) => {
 
   const headers = originalName
     ? {
-        "response-content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(
+        "response-content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(
           originalName,
         )}`,
       }

@@ -29,12 +29,18 @@ const DOCUMENT_TYPES = [
 
 const ALLOWED_TYPES = {
   cover: IMAGE_TYPES,
-  video: VIDEO_TYPES,
+  videoRu: VIDEO_TYPES,
+  videoUz: VIDEO_TYPES,
   documentRu: DOCUMENT_TYPES,
   documentUz: DOCUMENT_TYPES,
   teacherGuideRu: DOCUMENT_TYPES,
   teacherGuideUz: DOCUMENT_TYPES,
+  lessonNotesRu: DOCUMENT_TYPES,
+  lessonNotesUz: DOCUMENT_TYPES,
 };
+
+/** Fields that carry a video, allowed past the smaller per-file cap. */
+const VIDEO_FIELDS = ["videoRu", "videoUz"];
 
 const MISSION_FILE_FIELDS = Object.keys(ALLOWED_TYPES).map((name) => ({
   name,
@@ -73,7 +79,10 @@ const decodeFileName = (name) => {
 const oversizedFile = (req) =>
   Object.entries(req.files ?? {})
     .flatMap(([field, list]) => list.map((file) => ({ field, file })))
-    .find(({ field, file }) => field !== "video" && file.size > MAX_FILE_SIZE);
+    .find(
+      ({ field, file }) =>
+        !VIDEO_FIELDS.includes(field) && file.size > MAX_FILE_SIZE,
+    );
 
 const normalizeFileNames = (req) => {
   Object.values(req.files ?? {}).forEach((list) =>

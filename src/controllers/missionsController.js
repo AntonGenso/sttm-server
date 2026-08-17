@@ -102,6 +102,16 @@ const createMission = async (req, res) => {
       return res.status(400).json({ message: "Game link must be a valid URL" });
     }
 
+    const bonusXp =
+      req.body.bonusXp === undefined || req.body.bonusXp === ""
+        ? 0
+        : Number(req.body.bonusXp);
+    if (!Number.isInteger(bonusXp) || bonusXp < 0) {
+      return res
+        .status(400)
+        .json({ message: "Bonus XP must be a non-negative integer" });
+    }
+
     const files = collectFiles(req);
 
     const result = await services.createNewMission({
@@ -110,6 +120,7 @@ const createMission = async (req, res) => {
       xp,
       type,
       gameLink,
+      bonusXp,
       files,
     });
 
@@ -125,11 +136,14 @@ const createMission = async (req, res) => {
 
 const ASSET_FIELDS = [
   "cover",
-  "video",
+  "videoRu",
+  "videoUz",
   "documentRu",
   "documentUz",
   "teacherGuideRu",
   "teacherGuideUz",
+  "lessonNotesRu",
+  "lessonNotesUz",
 ];
 
 /**
@@ -176,6 +190,16 @@ const updateMission = async (req, res) => {
           .json({ message: "Game link must be a valid URL" });
       }
       fields.gameLink = gameLink;
+    }
+
+    if (req.body.bonusXp !== undefined && req.body.bonusXp !== "") {
+      const bonusXp = Number(req.body.bonusXp);
+      if (!Number.isInteger(bonusXp) || bonusXp < 0) {
+        return res
+          .status(400)
+          .json({ message: "Bonus XP must be a non-negative integer" });
+      }
+      fields.bonusXp = bonusXp;
     }
 
     const remove = collectRemovals(req.body.remove);
