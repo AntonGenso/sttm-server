@@ -24,6 +24,29 @@ const PUBLIC_BASE_URL = (
   }`
 ).replace(/\/+$/, "");
 
+/**
+ * Путь, по которому браузер ходит в MinIO, когда тот спрятан за обратным
+ * прокси админки (`/uploads`). Пустое значение — ссылки остаются абсолютными
+ * и ведут прямо в MinIO.
+ *
+ * Подпись SigV4 включает заголовок `Host`, поэтому прокси обязан подставлять
+ * хост самого MinIO (`changeOrigin` у vite, `proxy_set_header Host` у nginx) —
+ * иначе MinIO ответит 403.
+ */
+const BROWSER_PREFIX = (process.env.MINIO_BROWSER_PREFIX || "").replace(
+  /\/+$/,
+  "",
+);
+
+/**
+ * Переписывает абсолютный URL от MinIO на путь через прокси. Query-строку с
+ * подписью трогать нельзя, меняется только origin.
+ */
+const toBrowserUrl = (url) =>
+  url && BROWSER_PREFIX
+    ? url.replace(/^https?:\/\/[^/]+/, BROWSER_PREFIX)
+    : url;
+
 const anonymousReadPolicy = (bucket) => ({
   Version: "2012-10-17",
   Statement: PUBLIC_PREFIXES.map((prefix) => ({
@@ -73,5 +96,7 @@ module.exports = {
   PRIVATE_BUCKET,
   PUBLIC_PREFIXES,
   PUBLIC_BASE_URL,
+  BROWSER_PREFIX,
+  toBrowserUrl,
   ensureBuckets,
 };

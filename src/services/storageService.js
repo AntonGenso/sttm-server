@@ -5,6 +5,7 @@ const {
   PUBLIC_BUCKET,
   PRIVATE_BUCKET,
   PUBLIC_BASE_URL,
+  toBrowserUrl,
   ensureBuckets,
 } = require("../config/storage");
 
@@ -89,7 +90,7 @@ const removeMissionAsset = async (kind, key) => {
 
 /** Public objects are served straight from MinIO — no signature involved. */
 const getPublicUrl = (key) =>
-  key ? `${PUBLIC_BASE_URL}/${PUBLIC_BUCKET}/${key}` : null;
+  key ? toBrowserUrl(`${PUBLIC_BASE_URL}/${PUBLIC_BUCKET}/${key}`) : null;
 
 /**
  * Private objects are handed out as short-lived signed links. `originalName`
@@ -114,12 +115,16 @@ const getPrivateUrl = async (key, originalName) => {
       }
     : {};
 
-  return minioClient.presignedGetObject(
+  const url = await minioClient.presignedGetObject(
     PRIVATE_BUCKET,
     key,
     PRIVATE_URL_TTL,
     headers,
   );
+
+  // presignedGetObject всегда строит URL из endPoint/port клиента, поэтому
+  // MINIO_PUBLIC_URL на него не влияет — адрес для браузера подставляем здесь.
+  return toBrowserUrl(url);
 };
 
 const listByPrefix = (bucket, prefix) =>
