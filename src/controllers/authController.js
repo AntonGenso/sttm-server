@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const services = require("../services/authService");
 const gameService = require("../services/gameService");
+const refreshTokenService = require("../services/refreshTokenService");
 const { validatePassword } = require("../utils/password");
 const { normalizePhone, PHONE_ERROR } = require("../utils/phone");
 const { normalizeInviteCode, isValidInviteCode } = require("../utils/classes");
@@ -13,7 +14,10 @@ const NICKNAME_REGEX = /^[a-zA-Z0-9_]{2,16}$/;
 const PIN_REGEX = /^\d{4}$/;
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+// Short-lived on purpose: the access token is a cache of the user's roles, and
+// /auth/refresh re-reads roles from the DB every time it mints a new one. Keep
+// this small so a role change (e.g. granting a teacher) takes effect quickly.
+const JWT_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "15m";
 
 const signToken = (user) =>
   jwt.sign(
@@ -21,6 +25,17 @@ const signToken = (user) =>
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN },
   );
+
+/**
+ * Builds the standard auth response: a short access token plus a freshly issued
+ * refresh token. Used by register/login/student-register so every entry point
+ * returns the same shape.
+ */
+const issueSession = async (user) => {
+  const token = signToken(user);
+  const refreshToken = await refreshTokenService.issueRefreshToken(user.id);
+  return { user, token, refreshToken };
+};
 
 const register = async (req, res) => {
   try {
@@ -47,9 +62,8 @@ const register = async (req, res) => {
       normalizedPhone,
       password,
     );
-    const token = signToken(user);
 
-    res.status(201).json({ user, token });
+    res.status(201).json(await issueSession(user));
   } catch (error) {
     console.error(error);
     if (error.status === 409) {
@@ -70,9 +84,8 @@ const login = async (req, res) => {
     }
 
     const user = await services.loginUser(name.trim(), password);
-    const token = signToken(user);
 
-    res.status(200).json({ user, token });
+    res.status(200).json(await issueSession(user));
   } catch (error) {
     console.error(error);
     if (error.status === 401) {
@@ -108,9 +121,8 @@ const registerStudent = async (req, res) => {
       pin,
       code,
     );
-    const token = signToken(user);
 
-    res.status(201).json({ user, token });
+    res.status(201).json(await issueSession(user));
   } catch (error) {
     console.error(error);
     if (error.status === 404) {
@@ -123,8 +135,52 @@ const registerStudent = async (req, res) => {
   }
 };
 
+/**
+ * Exchanges a valid refresh token for a new access token, rotating the refresh
+ * token in the process. Roles are re-read from the DB here, so this is also the
+ * moment a role change propagates into the session.
+ */
+const refresh = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (typeof refreshToken !== "string" || !refreshToken) {
+      return res.status(400).json({ message: "Refresh token is required" });
+    }
+
+    const { userId, refreshToken: rotated } =
+      await refreshTokenService.rotateRefreshToken(refreshToken);
+    const user = await services.getAuthUserById(userId);
+    const token = signToken(user);
+
+    res.status(200).json({ user, token, refreshToken: rotated });
+  } catch (error) {
+    if (error.status === 401) {
+      return res.status(401).json({ message: error.message });
+    }
+    console.error(error);
+    res.status(500).json({ message: "Error refreshing session" });
+  }
+};
+
+/** Revokes the refresh token so it can no longer be rotated. */
+const logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (typeof refreshToken === "string" && refreshToken) {
+      await refreshTokenService.revokeRefreshToken(refreshToken);
+    }
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error logging out" });
+  }
+};
+
 module.exports = {
   register,
   login,
   registerStudent,
+  refresh,
+  logout,
 };

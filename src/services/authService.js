@@ -14,6 +14,29 @@ const findUserByName = async (name) => {
   return rows[0] ?? null;
 };
 
+const findUserById = async (id) => {
+  const [rows] = await pool.query("SELECT * FROM users WHERE id = ?", [id]);
+  return rows[0] ?? null;
+};
+
+/**
+ * Loads the auth view of a user by id, roles included. Used by /auth/refresh so
+ * every rotated access token carries the roles as they are in the DB *now* —
+ * this is what lets a freshly granted teacher role take effect without a manual
+ * re-login.
+ */
+const getAuthUserById = async (id) => {
+  const user = await findUserById(id);
+  if (!user) {
+    const error = new Error("User not found");
+    error.status = 401;
+    throw error;
+  }
+
+  const roles = await rolesService.getUserRoleNames(user.id);
+  return { id: user.id, name: user.name, phone: user.phone ?? null, roles };
+};
+
 const registerUser = async (name, phone, password) => {
   const existing = await findUserByName(name);
   if (existing) {
@@ -81,6 +104,8 @@ const loginUser = async (name, password) => {
 
 module.exports = {
   findUserByName,
+  findUserById,
+  getAuthUserById,
   registerUser,
   loginUser,
   DEFAULT_ROLE_NAME,
