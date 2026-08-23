@@ -10,6 +10,7 @@ const {
 } = require("../utils/classes");
 
 const SCHOOL_NAME_MAX_LENGTH = 255;
+const CITY_NAME_MAX_LENGTH = 100;
 
 const getMyClasses = async (req, res) => {
   try {
@@ -23,11 +24,15 @@ const getMyClasses = async (req, res) => {
 
 const createClass = async (req, res) => {
   try {
-    const { cityId, schoolName, grade, letter } = req.body;
+    const { cityName, schoolName, grade, letter } = req.body;
 
-    const city = Number(cityId);
-    if (!Number.isInteger(city) || city <= 0) {
+    if (typeof cityName !== "string" || !cityName.trim()) {
       return res.status(400).json({ message: "City is required" });
+    }
+    if (cityName.trim().length > CITY_NAME_MAX_LENGTH) {
+      return res.status(400).json({
+        message: `City name must be at most ${CITY_NAME_MAX_LENGTH} characters long`,
+      });
     }
 
     if (typeof schoolName !== "string" || !schoolName.trim()) {
@@ -48,12 +53,14 @@ const createClass = async (req, res) => {
 
     const parsedLetter = parseLetter(letter);
     if (!parsedLetter) {
-      return res.status(400).json({ message: "Unknown class letter" });
+      return res
+        .status(400)
+        .json({ message: "Letter must be a single latin or cyrillic letter" });
     }
 
     const result = await services.createClass({
       teacherId: req.user.id,
-      cityId: city,
+      cityName: cityName.trim(),
       schoolName: schoolName.trim(),
       grade: parsedGrade,
       letter: parsedLetter.letter,

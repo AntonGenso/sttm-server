@@ -57,7 +57,7 @@ const ASSET_COLUMNS = {
 const getMissions = async () => {
   try {
     const [rows] = await pool.query(
-      `SELECT m.id, m.name, m.label, m.xp, m.type, m.created_at,
+      `SELECT m.id, m.name, m.label, m.xp, m.type, m.is_active, m.created_at,
               mi.cover_key,
               COALESCE(mi.video_key_ru, mi.video_key_uz, mi.video_key) AS video_key,
               mi.game_link
@@ -83,7 +83,7 @@ const getMissions = async () => {
  */
 const getMissionById = async (id) => {
   const [rows] = await pool.query(
-    `SELECT m.id, m.name, m.label, m.xp, m.type, m.created_at, m.updated_at,
+    `SELECT m.id, m.name, m.label, m.xp, m.type, m.is_active, m.created_at, m.updated_at,
             mi.game_link, mi.bonus_xp, mi.cover_key,
             mi.video_key_ru, mi.video_name_ru,
             mi.video_key_uz, mi.video_name_uz,
@@ -146,6 +146,7 @@ const getMissionById = async (id) => {
     label: mission.label,
     xp: mission.xp,
     type: mission.type,
+    is_active: mission.is_active,
     created_at: mission.created_at,
     updated_at: mission.updated_at,
     game_link: mission.game_link,
@@ -324,7 +325,13 @@ const updateMission = async (missionId, { fields = {}, files = {}, remove = [] }
   const replaced = [];
 
   try {
-    const missionColumns = { name: "name", label: "label", xp: "xp", type: "type" };
+    const missionColumns = {
+      name: "name",
+      label: "label",
+      xp: "xp",
+      type: "type",
+      isActive: "is_active",
+    };
     const missionAssignments = Object.entries(missionColumns)
       .filter(([field]) => fields[field] !== undefined)
       .map(([field, column]) => ({ column, value: fields[field] }));

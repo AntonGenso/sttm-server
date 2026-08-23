@@ -182,6 +182,13 @@ const updateMission = async (req, res) => {
       fields.type = req.body.type;
     }
 
+    // Multipart carries the flag as a string; treat "1"/"true" as visible.
+    if (req.body.isActive !== undefined) {
+      fields.isActive = ["1", "true"].includes(String(req.body.isActive))
+        ? 1
+        : 0;
+    }
+
     if (req.body.gameLink !== undefined) {
       const gameLink = parseLink(req.body.gameLink);
       if (gameLink === false) {

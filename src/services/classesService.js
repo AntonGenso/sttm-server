@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const schoolsService = require("./schoolsService");
+const citiesService = require("./citiesService");
 const { generateInviteCode } = require("../utils/classes");
 
 /** Random codes collide rarely; the unique index decides, we just try again. */
@@ -44,7 +45,7 @@ const recordInviteCode = async (connection, classId, code) => {
 
 const createClass = async ({
   teacherId,
-  cityId,
+  cityName,
   schoolName,
   grade,
   letter,
@@ -54,8 +55,12 @@ const createClass = async ({
   try {
     await connection.beginTransaction();
 
+    // Cities are typed by hand, so the one the teacher entered is found or
+    // created first — its id is what the school is then scoped to.
+    const city = await citiesService.getOrCreateCity(cityName, connection);
+
     const school = await schoolsService.getOrCreateSchool(
-      cityId,
+      city.id,
       schoolName,
       teacherId,
       connection,

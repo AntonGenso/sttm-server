@@ -9,12 +9,12 @@ const CODE_LENGTH = 7;
 const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 const GRADE_MIN = 1;
-const GRADE_MAX = 4;
+const GRADE_MAX = 11;
 
 // Cyrillic and latin letters are different codepoints, so «А» and "A" never
 // collide in the unique index — `alphabet` only records which set was picked.
-const CYRILLIC_LETTERS = ["А", "Б", "В", "Г", "Д"];
-const LATIN_LETTERS = ["A", "B", "C", "D", "E", "F", "G"];
+const CYRILLIC_LETTER = /^[А-ЯЁ]$/;
+const LATIN_LETTER = /^[A-Z]$/;
 
 /** `crypto.randomBytes` over a 31-char alphabet: ~2.7e10 possible codes. */
 const generateInviteCode = () =>
@@ -38,7 +38,10 @@ const parseGrade = (value) => {
     : null;
 };
 
-/** Returns `{ letter, alphabet }` for a known letter, or null for anything else. */
+/**
+ * Returns `{ letter, alphabet }` for a single latin or cyrillic letter, or null
+ * for anything else. The alphabet is derived from which script the letter is in.
+ */
 const parseLetter = (value) => {
   if (typeof value !== "string") {
     return null;
@@ -46,10 +49,10 @@ const parseLetter = (value) => {
 
   const letter = value.trim().toUpperCase();
 
-  if (CYRILLIC_LETTERS.includes(letter)) {
+  if (CYRILLIC_LETTER.test(letter)) {
     return { letter, alphabet: "cyrillic" };
   }
-  if (LATIN_LETTERS.includes(letter)) {
+  if (LATIN_LETTER.test(letter)) {
     return { letter, alphabet: "latin" };
   }
   return null;
@@ -70,8 +73,6 @@ module.exports = {
   CODE_LENGTH,
   GRADE_MIN,
   GRADE_MAX,
-  CYRILLIC_LETTERS,
-  LATIN_LETTERS,
   generateInviteCode,
   normalizeInviteCode,
   isValidInviteCode,

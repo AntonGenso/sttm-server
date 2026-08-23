@@ -4,6 +4,7 @@ const gameService = require("../services/gameService");
 const refreshTokenService = require("../services/refreshTokenService");
 const { validatePassword } = require("../utils/password");
 const { normalizePhone, PHONE_ERROR } = require("../utils/phone");
+const { validateName } = require("../utils/name");
 const { normalizeInviteCode, isValidInviteCode } = require("../utils/classes");
 
 // Game nicknames: 2–16 latin letters, digits or underscore. Mirrors the client
@@ -45,6 +46,11 @@ const register = async (req, res) => {
       return res
         .status(400)
         .json({ message: "Name, phone and password are required" });
+    }
+
+    const nameError = validateName(name);
+    if (nameError) {
+      return res.status(400).json({ message: nameError });
     }
 
     const normalizedPhone = normalizePhone(phone);
