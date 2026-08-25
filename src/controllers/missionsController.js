@@ -1,5 +1,6 @@
 const services = require("../services/missionsService");
 const { MAX_FACTS } = require("../middleware/upload");
+const { unsupportedVideoCodec } = require("../utils/videoCodec");
 
 const MISSION_TYPES = ["current", "bonuse"];
 
@@ -95,6 +96,28 @@ const parseFacts = (value, files = {}) => {
   }
 
   return facts;
+};
+
+/** Video fields, checked for a codec the students' browsers can decode. */
+const VIDEO_FIELDS = ["videoRu", "videoUz"];
+
+/**
+ * Guards against a video that would upload happily and then play as sound over
+ * a black rectangle. Returns the message to answer with, or null when the
+ * files are fine.
+ */
+const videoCodecError = (files) => {
+  for (const field of VIDEO_FIELDS) {
+    const file = files[field];
+    if (!file) continue;
+
+    const codec = unsupportedVideoCodec(file.buffer);
+    if (codec) {
+      return `${field}: the video is encoded with ${codec}, which most browsers cannot play — they would give sound and a black picture. Re-encode it to H.264, for example: ffmpeg -i input.mp4 -c:v libx264 -crf 21 -pix_fmt yuv420p -c:a aac -movflags +faststart output.mp4`;
+    }
+  }
+
+  return null;
 };
 
 /** multer's `fields()` gives an array per field; the form allows one file each. */
@@ -193,6 +216,11 @@ const createMission = async (req, res) => {
     }
 
     const files = collectFiles(req);
+
+    const codecError = videoCodecError(files);
+    if (codecError) {
+      return res.status(400).json({ message: codecError });
+    }
 
     const facts = parseFacts(req.body.facts, files);
     if (facts === false) {
@@ -315,6 +343,11 @@ const updateMission = async (req, res) => {
     }
 
     const files = collectFiles(req);
+
+    const codecError = videoCodecError(files);
+    if (codecError) {
+      return res.status(400).json({ message: codecError });
+    }
 
     const facts = parseFacts(req.body.facts, files);
     if (facts === false) {
