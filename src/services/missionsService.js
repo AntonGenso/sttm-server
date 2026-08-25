@@ -54,23 +54,186 @@ const ASSET_COLUMNS = {
   },
 };
 
+/**
+ * Facts of a mission, ready for the client: the text comes from the row, the
+ * picture from the public bucket. Both locales are handed out — the game picks
+ * one and falls back to Russian when the Uzbek text was left empty.
+ */
+const listFacts = async (missionId, executor = pool) => {
+  const [rows] = await executor.query(
+    `SELECT id, position, title_ru, title_uz, description_ru, description_uz,
+            image_key
+       FROM mission_facts
+      WHERE mission_id = ?
+      ORDER BY position, id`,
+    [missionId],
+  );
+
+  return rows.map((fact) => ({
+    id: fact.id,
+    position: fact.position,
+    title: { ru: fact.title_ru, uz: fact.title_uz },
+    description: { ru: fact.description_ru, uz: fact.description_uz },
+    image_url: storageService.getPublicUrl(fact.image_key),
+  }));
+};
+
+/**
+ * Replaces the mission's facts with the list the form sent.
+ *
+ * The list is authoritative: a fact carrying an `id` is updated, one without is
+ * created, and a stored fact missing from the list is deleted. A picture is
+ * only touched when the form says so — `imageField` names a freshly uploaded
+ * file, `keepImage` keeps what is stored, and neither means "no picture".
+ *
+ * Objects are removed only after the rows point elsewhere, so a fact never
+ * references a file that is already gone.
+ */
+const replaceFacts = async (missionId, facts, files = {}) => {
+  const [stored] = await pool.query(
+    "SELECT id, image_key FROM mission_facts WHERE mission_id = ?",
+    [missionId],
+  );
+  const storedById = new Map(stored.map((fact) => [fact.id, fact.image_key]));
+
+  const uploaded = [];
+  const orphaned = [];
+  const keptIds = new Set();
+
+  try {
+    for (const [index, fact] of facts.entries()) {
+      const file = fact.imageField ? files[fact.imageField] : null;
+      const storedKey = fact.id ? (storedById.get(fact.id) ?? null) : null;
+
+      let imageKey = null;
+      if (file) {
+        imageKey = await storageService.uploadMissionAsset({
+          missionId,
+          kind: "fact",
+          file,
+        });
+        uploaded.push(imageKey);
+      } else if (fact.keepImage) {
+        imageKey = storedKey;
+      }
+
+      if (fact.id && storedById.has(fact.id)) {
+        await pool.query(
+          `UPDATE mission_facts
+              SET position = ?, title_ru = ?, title_uz = ?,
+                  description_ru = ?, description_uz = ?, image_key = ?
+            WHERE id = ? AND mission_id = ?`,
+          [
+            index,
+            fact.titleRu,
+            fact.titleUz,
+            fact.descriptionRu,
+            fact.descriptionUz,
+            imageKey,
+            fact.id,
+            missionId,
+          ],
+        );
+        keptIds.add(fact.id);
+        if (storedKey && storedKey !== imageKey) {
+          orphaned.push(storedKey);
+        }
+      } else {
+        await pool.query(
+          `INSERT INTO mission_facts
+             (mission_id, position, title_ru, title_uz,
+              description_ru, description_uz, image_key)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            missionId,
+            index,
+            fact.titleRu,
+            fact.titleUz,
+            fact.descriptionRu,
+            fact.descriptionUz,
+            imageKey,
+          ],
+        );
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    await Promise.all(
+      uploaded.map((key) =>
+        storageService
+          .removeMissionAsset("fact", key)
+          .catch((cleanupError) =>
+            console.error("Failed to remove orphan fact image", cleanupError),
+          ),
+      ),
+    );
+    const failure = new Error("Error saving mission facts");
+    failure.status = 502;
+    throw failure;
+  }
+
+  const removed = stored.filter((fact) => !keptIds.has(fact.id));
+  if (removed.length) {
+    await pool.query(
+      `DELETE FROM mission_facts WHERE mission_id = ? AND id IN (${removed
+        .map(() => "?")
+        .join(", ")})`,
+      [missionId, ...removed.map((fact) => fact.id)],
+    );
+    orphaned.push(...removed.map((fact) => fact.image_key).filter(Boolean));
+  }
+
+  // Nothing points at these any more; a failure here only leaves dead bytes.
+  await Promise.all(
+    orphaned.map((key) =>
+      storageService
+        .removeMissionAsset("fact", key)
+        .catch((error) =>
+          console.error("Failed to remove replaced fact image", error),
+        ),
+    ),
+  );
+};
+
 const getMissions = async () => {
   try {
     const [rows] = await pool.query(
-      `SELECT m.id, m.name, m.label, m.xp, m.type, m.is_active, m.created_at,
+      `SELECT m.id, m.name, m.label, m.xp, m.level, m.type, m.is_active, m.created_at,
               mi.cover_key,
               COALESCE(mi.video_key_ru, mi.video_key_uz, mi.video_key) AS video_key,
-              mi.game_link
+              mi.video_key_ru, mi.video_key_uz,
+              mi.game_link, mi.bonus_xp,
+              mi.document_link_ru IS NOT NULL AS has_document_ru,
+              mi.document_link_uz IS NOT NULL AS has_document_uz
          FROM missions m
          LEFT JOIN mission_info mi ON mi.mission_id = m.id
-        ORDER BY m.id`,
+        ORDER BY m.level, m.id`,
     );
 
-    return rows.map(({ cover_key, video_key, ...mission }) => ({
-      ...mission,
-      cover_url: storageService.getPublicUrl(cover_key),
-      video_url: storageService.getPublicUrl(video_key),
-    }));
+    return rows.map(
+      ({
+        cover_key,
+        video_key,
+        video_key_ru,
+        video_key_uz,
+        has_document_ru,
+        has_document_uz,
+        ...mission
+      }) => ({
+        ...mission,
+        bonus_xp: mission.bonus_xp ?? 0,
+        cover_url: storageService.getPublicUrl(cover_key),
+        video_url: storageService.getPublicUrl(video_key),
+        // Per-locale video and the mere presence of the student handout are
+        // what the game client needs to lay out a mission card; the handout
+        // itself lives in the private bucket and is fetched per mission.
+        video: {
+          ru: storageService.getPublicUrl(video_key_ru),
+          uz: storageService.getPublicUrl(video_key_uz),
+        },
+        has_document: Boolean(has_document_ru) || Boolean(has_document_uz),
+      }),
+    );
   } catch (error) {
     console.error(error);
     throw new Error("Error gettiong missions");
@@ -83,7 +246,8 @@ const getMissions = async () => {
  */
 const getMissionById = async (id) => {
   const [rows] = await pool.query(
-    `SELECT m.id, m.name, m.label, m.xp, m.type, m.is_active, m.created_at, m.updated_at,
+    `SELECT m.id, m.name, m.label, m.xp, m.level, m.type, m.is_active,
+            m.created_at, m.updated_at,
             mi.game_link, mi.bonus_xp, mi.cover_key,
             mi.video_key_ru, mi.video_name_ru,
             mi.video_key_uz, mi.video_name_uz,
@@ -113,6 +277,7 @@ const getMissionById = async (id) => {
     teacherGuideUz,
     lessonNotesRu,
     lessonNotesUz,
+    facts,
   ] = await Promise.all([
     storageService.getPrivateUrl(
       mission.document_link_ru,
@@ -138,6 +303,7 @@ const getMissionById = async (id) => {
       mission.lesson_notes_uz,
       mission.lesson_notes_name_uz,
     ),
+    listFacts(mission.id),
   ]);
 
   return {
@@ -145,6 +311,7 @@ const getMissionById = async (id) => {
     name: mission.name,
     label: mission.label,
     xp: mission.xp,
+    level: mission.level,
     type: mission.type,
     is_active: mission.is_active,
     created_at: mission.created_at,
@@ -176,6 +343,7 @@ const getMissionById = async (id) => {
       ru: { url: lessonNotesRu, name: mission.lesson_notes_name_ru },
       uz: { url: lessonNotesUz, name: mission.lesson_notes_name_uz },
     },
+    facts,
   };
 };
 
@@ -206,9 +374,11 @@ const createNewMission = async ({
   name,
   label,
   xp = 0,
+  level = 0,
   type = "current",
   gameLink = null,
   bonusXp = 0,
+  facts = [],
   files = {},
 }) => {
   const connection = await pool.getConnection();
@@ -218,8 +388,8 @@ const createNewMission = async ({
     await connection.beginTransaction();
 
     const [result] = await connection.query(
-      "INSERT INTO missions (name, label, xp, type) VALUES (?, ?, ?, ?)",
-      [name, label, xp, type],
+      "INSERT INTO missions (name, label, xp, level, type) VALUES (?, ?, ?, ?, ?)",
+      [name, label, xp, level, type],
     );
     missionId = result.insertId;
 
@@ -274,6 +444,16 @@ const createNewMission = async ({
     throw failure;
   }
 
+  if (facts.length) {
+    try {
+      await replaceFacts(missionId, facts, files);
+    } catch (error) {
+      console.error(error);
+      await rollbackMission(missionId, uploaded);
+      throw error;
+    }
+  }
+
   return getMissionById(missionId);
 };
 
@@ -308,7 +488,10 @@ const getStoredKeys = async (missionId) => {
  * before the old object is deleted — at no moment does a row point at a key
  * that no longer exists. Fields listed in `remove` are cleared the same way.
  */
-const updateMission = async (missionId, { fields = {}, files = {}, remove = [] }) => {
+const updateMission = async (
+  missionId,
+  { fields = {}, files = {}, remove = [], facts },
+) => {
   // Also serves as the existence check for the whole operation.
   await getMissionById(missionId);
 
@@ -329,6 +512,7 @@ const updateMission = async (missionId, { fields = {}, files = {}, remove = [] }
       name: "name",
       label: "label",
       xp: "xp",
+      level: "level",
       type: "type",
       isActive: "is_active",
     };
@@ -426,6 +610,12 @@ const updateMission = async (missionId, { fields = {}, files = {}, remove = [] }
         ),
     ),
   );
+
+  // `facts` absent means the caller is not editing them; an empty array means
+  // "remove them all".
+  if (facts) {
+    await replaceFacts(missionId, facts, files);
+  }
 
   return getMissionById(missionId);
 };

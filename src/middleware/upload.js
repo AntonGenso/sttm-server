@@ -27,7 +27,22 @@ const DOCUMENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 ];
 
+/**
+ * How many facts one mission may carry. The form sends a fact's picture as
+ * `factImage_<index>`, and multer needs every field name up front, so the cap
+ * lives here as well as in the controller.
+ */
+const MAX_FACTS = 20;
+
+const FACT_IMAGE_FIELDS = Object.fromEntries(
+  Array.from({ length: MAX_FACTS }, (_, index) => [
+    `factImage_${index}`,
+    IMAGE_TYPES,
+  ]),
+);
+
 const ALLOWED_TYPES = {
+  ...FACT_IMAGE_FIELDS,
   cover: IMAGE_TYPES,
   videoRu: VIDEO_TYPES,
   videoUz: VIDEO_TYPES,
@@ -123,5 +138,6 @@ const handleUploadErrors = (middleware) => (req, res, next) =>
 module.exports = {
   MAX_FILE_SIZE,
   MAX_VIDEO_SIZE,
+  MAX_FACTS,
   missionFiles: handleUploadErrors(missionFiles),
 };

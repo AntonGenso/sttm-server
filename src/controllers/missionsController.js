@@ -1,4 +1,5 @@
 const services = require("../services/missionsService");
+const { MAX_FACTS } = require("../middleware/upload");
 
 const MISSION_TYPES = ["current", "bonuse"];
 
@@ -22,6 +23,78 @@ const parseLink = (value) => {
   } catch {
     return false;
   }
+};
+
+/** Non-negative integer from a form field; `false` when the value is junk. */
+const parseCount = (value) => {
+  if (value === undefined || value === "") {
+    return 0;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : false;
+};
+
+/**
+ * The facts of a mission, sent as one JSON field beside the pictures.
+ *
+ * Shape per fact: `{ id?, titleRu, titleUz?, descriptionRu, descriptionUz?,
+ * imageField?, keepImage? }` — `imageField` names one of the uploaded
+ * `factImage_<n>` files, `keepImage` keeps the picture already stored.
+ *
+ * Returns `undefined` when the field was not sent at all (facts stay as they
+ * are), `false` when it cannot be read, and the normalized list otherwise.
+ */
+const parseFacts = (value, files = {}) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  let parsed;
+  try {
+    parsed = typeof value === "string" ? JSON.parse(value) : value;
+  } catch {
+    return false;
+  }
+
+  if (!Array.isArray(parsed) || parsed.length > MAX_FACTS) {
+    return false;
+  }
+
+  const facts = [];
+  for (const fact of parsed) {
+    if (!fact || typeof fact !== "object") {
+      return false;
+    }
+
+    const titleRu = String(fact.titleRu ?? "").trim();
+    const descriptionRu = String(fact.descriptionRu ?? "").trim();
+    if (!titleRu || !descriptionRu) {
+      return false;
+    }
+
+    const imageField = fact.imageField ?? null;
+    if (imageField !== null && !(imageField in files)) {
+      return false;
+    }
+
+    const id =
+      fact.id === undefined || fact.id === null ? null : Number(fact.id);
+    if (id !== null && !Number.isInteger(id)) {
+      return false;
+    }
+
+    facts.push({
+      id,
+      titleRu,
+      titleUz: String(fact.titleUz ?? "").trim() || null,
+      descriptionRu,
+      descriptionUz: String(fact.descriptionUz ?? "").trim() || null,
+      imageField,
+      keepImage: Boolean(fact.keepImage),
+    });
+  }
+
+  return facts;
 };
 
 /** multer's `fields()` gives an array per field; the form allows one file each. */
@@ -92,6 +165,13 @@ const createMission = async (req, res) => {
         .json({ message: "XP must be a non-negative integer" });
     }
 
+    const level = parseCount(req.body.level);
+    if (level === false) {
+      return res
+        .status(400)
+        .json({ message: "Level must be a non-negative integer" });
+    }
+
     const type = req.body.type || "current";
     if (!MISSION_TYPES.includes(type)) {
       return res.status(400).json({ message: "Unknown mission type" });
@@ -114,13 +194,22 @@ const createMission = async (req, res) => {
 
     const files = collectFiles(req);
 
+    const facts = parseFacts(req.body.facts, files);
+    if (facts === false) {
+      return res.status(400).json({
+        message: `Facts are malformed; each needs a title and a description, up to ${MAX_FACTS} per mission`,
+      });
+    }
+
     const result = await services.createNewMission({
       name: slug,
       label,
       xp,
+      level,
       type,
       gameLink,
       bonusXp,
+      facts: facts ?? [],
       files,
     });
 
@@ -175,6 +264,16 @@ const updateMission = async (req, res) => {
       fields.xp = xp;
     }
 
+    if (req.body.level !== undefined && req.body.level !== "") {
+      const level = parseCount(req.body.level);
+      if (level === false) {
+        return res
+          .status(400)
+          .json({ message: "Level must be a non-negative integer" });
+      }
+      fields.level = level;
+    }
+
     if (req.body.type !== undefined) {
       if (!MISSION_TYPES.includes(req.body.type)) {
         return res.status(400).json({ message: "Unknown mission type" });
@@ -215,10 +314,20 @@ const updateMission = async (req, res) => {
       return res.status(400).json({ message: `Unknown file field: ${unknown}` });
     }
 
+    const files = collectFiles(req);
+
+    const facts = parseFacts(req.body.facts, files);
+    if (facts === false) {
+      return res.status(400).json({
+        message: `Facts are malformed; each needs a title and a description, up to ${MAX_FACTS} per mission`,
+      });
+    }
+
     const result = await services.updateMission(Number(req.params.id), {
       fields,
-      files: collectFiles(req),
+      files,
       remove,
+      facts,
     });
 
     res.json(result);

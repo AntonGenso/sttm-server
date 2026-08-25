@@ -18,6 +18,9 @@ const PRIVATE_URL_TTL = 15 * 60;
  */
 const MISSION_ASSETS = {
   cover: { bucket: PUBLIC_BUCKET, folder: "cover", localized: false },
+  // Fact pictures are shown right on the mission screen, so they are public
+  // like the cover; the text of a fact lives in `mission_facts`.
+  fact: { bucket: PUBLIC_BUCKET, folder: "facts", localized: false },
   video: { bucket: PUBLIC_BUCKET, folder: "video", localized: true },
   material: { bucket: PRIVATE_BUCKET, folder: "materials", localized: true },
   teacherGuide: {

@@ -8,6 +8,7 @@ const {
   parseGrade,
   parseLetter,
 } = require("../utils/classes");
+const { containsProfanity } = require("../utils/profanity");
 
 const SCHOOL_NAME_MAX_LENGTH = 255;
 const CITY_NAME_MAX_LENGTH = 100;
@@ -41,6 +42,12 @@ const createClass = async (req, res) => {
     if (schoolName.trim().length > SCHOOL_NAME_MAX_LENGTH) {
       return res.status(400).json({
         message: `School name must be at most ${SCHOOL_NAME_MAX_LENGTH} characters long`,
+      });
+    }
+
+    if (containsProfanity(cityName) || containsProfanity(schoolName)) {
+      return res.status(400).json({
+        message: "City or school name contains inappropriate language",
       });
     }
 

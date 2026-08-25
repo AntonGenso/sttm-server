@@ -6,10 +6,8 @@ const { validatePassword } = require("../utils/password");
 const { normalizePhone, PHONE_ERROR } = require("../utils/phone");
 const { validateName } = require("../utils/name");
 const { normalizeInviteCode, isValidInviteCode } = require("../utils/classes");
+const { isValidNickname, isProfaneNickname } = require("../utils/nickname");
 
-// Game nicknames: 2–16 latin letters, digits or underscore. Mirrors the client
-// validator in step-to-the-moon.
-const NICKNAME_REGEX = /^[a-zA-Z0-9_]{2,16}$/;
 // Game PIN: exactly four digits. Students never type a full password, so the
 // account password is the PIN (hashed like any other).
 const PIN_REGEX = /^\d{4}$/;
@@ -110,8 +108,13 @@ const registerStudent = async (req, res) => {
   try {
     const { nickname, pin, classCode } = req.body;
 
-    if (typeof nickname !== "string" || !NICKNAME_REGEX.test(nickname.trim())) {
+    if (!isValidNickname(nickname)) {
       return res.status(400).json({ message: "Invalid nickname" });
+    }
+    if (isProfaneNickname(nickname)) {
+      return res
+        .status(400)
+        .json({ message: "Nickname contains inappropriate language" });
     }
     if (typeof pin !== "string" || !PIN_REGEX.test(pin)) {
       return res.status(400).json({ message: "PIN must be exactly 4 digits" });
