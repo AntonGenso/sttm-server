@@ -1,0 +1,932 @@
+[
+  {
+    "level": 1,
+    "label": "Earth",
+    "titleRu": "Mission: Earth",
+    "titleUz": "Missiya: Yer",
+    "questions": [
+      {
+        "textRu": "Самый центр Земли — это твёрдый шар. Из чего он состоит?",
+        "textUz": "Yerning eng markazi — bu qattiq shar. U nimadan tashkil topgan?",
+        "optionsRu": {
+          "A": "Из воды",
+          "B": "Из камня",
+          "C": "Из металла",
+          "D": "Из льда"
+        },
+        "optionsUz": {
+          "A": "Suvdan",
+          "B": "Toshdan",
+          "C": "Metalldan",
+          "D": "Muzdan"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Вокруг внутреннего ядра течёт жидкий металл. Что он создаёт?",
+        "textUz": "Ichki yadro atrofida suyuq metall oqib turadi. U nimani hosil qiladi?",
+        "optionsRu": {
+          "A": "Звук",
+          "B": "Магнитный щит",
+          "C": "Свет",
+          "D": "Ветер"
+        },
+        "optionsUz": {
+          "A": "Tovush",
+          "B": "Magnit qalqoni",
+          "C": "Yorug'lik",
+          "D": "Shamol"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Что двигает континенты и вызывает извержения вулканов?",
+        "textUz": "Qit'alarni nima harakatga keltiradi va vulqonlar otilishiga sabab bo'ladi?",
+        "optionsRu": {
+          "A": "Ветер",
+          "B": "Движение мантии",
+          "C": "Луна",
+          "D": "Солнце"
+        },
+        "optionsUz": {
+          "A": "Shamol",
+          "B": "Mantiya harakati",
+          "C": "Oy",
+          "D": "Quyosh"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Если представить Землю как яблоко, то земная кора — это…",
+        "textUz": "Agar Yerni olma deb tasavvur qilsak, Yer po'stlog'i — bu...",
+        "optionsRu": {
+          "A": "Всё яблоко целиком",
+          "B": "Тонкая кожура",
+          "C": "Семечка внутри",
+          "D": "Половина яблока"
+        },
+        "optionsUz": {
+          "A": "Butun boshli olma",
+          "B": "Olmaning yupqa po'sti",
+          "C": "Ichidagi urug'i",
+          "D": "Olmaning yarmi"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Земная кора не цельная — она состоит из огромных кусков, которые медленно двигаются. Что происходит, когда они сталкиваются?",
+        "textUz": "Yer po'stlog'i yaxlit emas, u sekin harakatlanadigan ulkan bo'laklardan iborat. Ular to'qnashganda nima sodir bo'ladi?",
+        "optionsRu": {
+          "A": "Дождь",
+          "B": "Землетрясения",
+          "C": "Снег",
+          "D": "Радуга"
+        },
+        "optionsUz": {
+          "A": "Yomg'ir",
+          "B": "Zilzilalar",
+          "C": "Qor",
+          "D": "Kamalak"
+        },
+        "correctOption": "B"
+      }
+    ]
+  },
+  {
+    "level": 2,
+    "label": "Atmosphere",
+    "titleRu": "Mission: Atmosphere",
+    "titleUz": "Missiya: Atmosfera",
+    "questions": [
+      {
+        "textRu": "Что такое атмосфера?",
+        "textUz": "Atmosfera nima?",
+        "optionsRu": {
+          "A": "Водная оболочка Земли",
+          "B": "Воздушная оболочка Земли",
+          "C": "Каменная оболочка Земли",
+          "D": "Магнитная оболочка Земли"
+        },
+        "optionsUz": {
+          "A": "Yerning suv qobig'i",
+          "B": "Yerning havo qobig'i",
+          "C": "Yerning tosh qobig'i",
+          "D": "Yerning magnit qobig'i"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Когда маленькие космические камни летят к Земле, что с ними происходит?",
+        "textUz": "Kichik kosmik toshlar Yerga uchib kelganda, ular bilan nima sodir bo'ladi?",
+        "optionsRu": {
+          "A": "Они пролетают насквозь",
+          "B": "Они сгорают в атмосфере",
+          "C": "Они отскакивают обратно",
+          "D": "Они останавливаются в космосе"
+        },
+        "optionsUz": {
+          "A": "Ular uchib o'tishadi",
+          "B": "Ular atmosferada yonib ketadi",
+          "C": "Ular orqaga qaytishadi",
+          "D": "Ular koinotda to'xtab qoladi"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "В каком слое атмосферы мы живём и дышим?",
+        "textUz": "Biz atmosferaning qaysi qatlamida yashab, nafas olamiz?",
+        "optionsRu": {
+          "A": "В стратосфере",
+          "B": "В тропосфере",
+          "C": "В экзосфере",
+          "D": "В мезосфере"
+        },
+        "optionsUz": {
+          "A": "Stratosferada",
+          "B": "Troposferada",
+          "C": "Ekzosferada",
+          "D": "Mezosferada"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Где образуются облака, дождь и ветер?",
+        "textUz": "Bulut, yomg'ir va shamol qayerda hosil bo'ladi?",
+        "optionsRu": {
+          "A": "В космосе",
+          "B": "В атмосфере",
+          "C": "Под землёй",
+          "D": "В океане"
+        },
+        "optionsUz": {
+          "A": "Koinotda",
+          "B": "Atmosferada",
+          "C": "Yer ostida",
+          "D": "Okeanda"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Сколько основных слоёв в атмосфере Земли?",
+        "textUz": "Yer atmosferasi nechta asosiy qatlamdan iborat?",
+        "optionsRu": {
+          "A": "Два",
+          "B": "Три",
+          "C": "Пять",
+          "D": "Десять"
+        },
+        "optionsUz": {
+          "A": "Ikkita",
+          "B": "Uchta",
+          "C": "Beshta",
+          "D": "O'nta"
+        },
+        "correctOption": "C"
+      }
+    ]
+  },
+  {
+    "level": 3,
+    "label": "Canyon Flight",
+    "titleRu": "Mission: Canyon Flight",
+    "titleUz": "Missiya: Kanyon bo'ylab parvoz",
+    "questions": [
+      {
+        "textRu": "Кто первым из живых существ облетел Землю в космосе?",
+        "textUz": "Tirik mavjudotlardan qaysi biri kosmosda birinchi bo'lib Yerning atrofini aylanib chiqqan?",
+        "optionsRu": {
+          "A": "Кошка",
+          "B": "Собака Лайка",
+          "C": "Обезьяна",
+          "D": "Птица"
+        },
+        "optionsUz": {
+          "A": "Mushuk",
+          "B": "Layka laqabli it",
+          "C": "Maymun",
+          "D": "Qush"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Кто стал первым человеком в космосе?",
+        "textUz": "Koinotga uchgan birinchi inson kim?",
+        "optionsRu": {
+          "A": "Нил Армстронг",
+          "B": "Юрий Гагарин",
+          "C": "Салижан Шарипов",
+          "D": "Валентина Терешкова"
+        },
+        "optionsUz": {
+          "A": "Nil Armstrong",
+          "B": "Yuriy Gagarin",
+          "C": "Solijon Sharipov",
+          "D": "Valentina Tereshkova"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Кто стала первой женщиной в космосе?",
+        "textUz": "Koinotga uchgan birinchi ayol kim?",
+        "optionsRu": {
+          "A": "Валентина Терешкова",
+          "B": "Салли Райд",
+          "C": "Светлана Савицкая",
+          "D": "Елена Кондакова"
+        },
+        "optionsUz": {
+          "A": "Valentina Tereshkova",
+          "B": "Salli Rayd",
+          "C": "Svetlana Savitskaya",
+          "D": "Yelena Kondakova"
+        },
+        "correctOption": "A"
+      },
+      {
+        "textRu": "Кто первым ступил на поверхность Луны?",
+        "textUz": "Kim oy yuzasiga birinchi bo'lib qadam qo'ygan?",
+        "optionsRu": {
+          "A": "Юрий Гагарин",
+          "B": "Базз Олдрин",
+          "C": "Нил Армстронг",
+          "D": "Салижан Шарипов"
+        },
+        "optionsUz": {
+          "A": "Yuriy Gagarin",
+          "B": "Bazz Oldrin",
+          "C": "Nil Armstrong",
+          "D": "Solijon Sharipov"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Какая организация готовит первого космонавта Узбекистана?",
+        "textUz": "Qaysi tashkilot O'zbekistonning ilk kosmonavtini tayyorlaydi?",
+        "optionsRu": {
+          "A": "NASA",
+          "B": "SpaceX",
+          "C": "UzCosmos",
+          "D": "ESA"
+        },
+        "optionsUz": {
+          "A": "NASA",
+          "B": "SpaceX",
+          "C": "UzCosmos",
+          "D": "ESA"
+        },
+        "correctOption": "C"
+      }
+    ]
+  },
+  {
+    "level": 4,
+    "label": "Telescope",
+    "titleRu": "Mission: Telescope",
+    "titleUz": "Missiya: Teleskop",
+    "questions": [
+      {
+        "textRu": "Для чего нужен телескоп?",
+        "textUz": "Teleskop nima uchun kerak?",
+        "optionsRu": {
+          "A": "Чтобы видеть далёкие объекты в космосе",
+          "B": "Чтобы слышать звуки из космоса",
+          "C": "Чтобы отправлять сигналы на другие планеты",
+          "D": "Чтобы измерять температуру звёзд"
+        },
+        "optionsUz": {
+          "A": "Koinotdagi olis obyektlarni kuzatish uchun",
+          "B": "Koinotdan keladigan tovushlarni eshitish uchun",
+          "C": "Boshqa sayyoralarga signal yuborish uchun",
+          "D": "Yulduzlarning haroratini o'lchash uchun"
+        },
+        "correctOption": "A"
+      },
+      {
+        "textRu": "В каком городе Мирзо Улугбек построил знаменитую обсерваторию для изучения звёзд?",
+        "textUz": "Mirzo Ulug'bek yulduzlarni o'rganishga mo'ljallangan mashhur rasadxonani qaysi shaharda qurdirgan?",
+        "optionsRu": {
+          "A": "Ташкент",
+          "B": "Бухара",
+          "C": "Самарканд",
+          "D": "Хива"
+        },
+        "optionsUz": {
+          "A": "Toshkent",
+          "B": "Buxoro",
+          "C": "Samarqand",
+          "D": "Xiva"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Где находится космический телескоп «Хаббл»?",
+        "textUz": "«Xabbl» kosmik teleskopi qayerda joylashgan?",
+        "optionsRu": {
+          "A": "На вершине горы",
+          "B": "На орбите вокруг Земли",
+          "C": "На Луне",
+          "D": "В пустыне"
+        },
+        "optionsUz": {
+          "A": "Tog'ning tepasida",
+          "B": "Yer atrofidagi orbitada",
+          "C": "Oyda",
+          "D": "Cho'lda"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Почему телескопы в космосе видят лучше, чем на Земле?",
+        "textUz": "Nima uchun kosmosdagi teleskoplar Yerdagiga qaraganda yaxshiroq ko'ra oladi?",
+        "optionsRu": {
+          "A": "Они больше по размеру",
+          "B": "Им не мешает атмосфера",
+          "C": "Они ближе к звёздам",
+          "D": "Они работают быстрее"
+        },
+        "optionsUz": {
+          "A": "Ularning o'lchami kattaroq",
+          "B": "Ularga atmosfera xalaqit bermaydi",
+          "C": "Ular yulduzlarga yaqinroq",
+          "D": "Ular tezroq ishlaydi"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Как называется новейший космический телескоп, запущенный в 2021 году?",
+        "textUz": "2021-yilda fazoga uchirilgan yangi teleskop qanday nomlanadi?",
+        "optionsRu": {
+          "A": "Хаббл",
+          "B": "Джеймс Уэбб",
+          "C": "Кеплер",
+          "D": "Спитцер"
+        },
+        "optionsUz": {
+          "A": "Xabbl",
+          "B": "Jeyms Uebb",
+          "C": "Kepler",
+          "D": "Spitser"
+        },
+        "correctOption": "B"
+      }
+    ]
+  },
+  {
+    "level": 5,
+    "label": "Satellite",
+    "titleRu": "Mission: Satellite",
+    "titleUz": "Missiya: Yo'ldosh",
+    "questions": [
+      {
+        "textRu": "Что такое спутник?",
+        "textUz": "Yo'ldosh nima?",
+        "optionsRu": {
+          "A": "Звезда рядом с планетой",
+          "B": "Объект, который вращается вокруг планеты",
+          "C": "Комета, пролетающая мимо Земли",
+          "D": "Часть планеты, которая откололась"
+        },
+        "optionsUz": {
+          "A": "Sayyora yaqinidagi yulduz",
+          "B": "Sayyora atrofida aylanadigan obyekt",
+          "C": "Yer yonidan uchib o'tadigan kometa",
+          "D": "Sayyoradan ajralib chiqqan qism"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Как назывался первый искусственный спутник Земли?",
+        "textUz": "Yerning ilk sun'iy yo'ldoshi qanday nomlangan?",
+        "optionsRu": {
+          "A": "Союз",
+          "B": "Восток",
+          "C": "Спутник-1",
+          "D": "Луна-1"
+        },
+        "optionsUz": {
+          "A": "Ittifoq (Soyuz)",
+          "B": "Sharq (Vostok)",
+          "C": "1-Yo'ldosh (Sputnik-1)",
+          "D": "1-Oy (Luna-1)"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Какая страна первой запустила спутник в космос?",
+        "textUz": "Koinotga birinchi bo'lib yo'ldosh uchirgan davlat qaysi?",
+        "optionsRu": {
+          "A": "США",
+          "B": "Китай",
+          "C": "СССР",
+          "D": "Франция"
+        },
+        "optionsUz": {
+          "A": "AQSH",
+          "B": "Xitoy",
+          "C": "SSSR",
+          "D": "Fransiya"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Какой естественный спутник есть у Земли?",
+        "textUz": "Yerning tabiiy yo'ldoshi nima?",
+        "optionsRu": {
+          "A": "Марс",
+          "B": "Солнце",
+          "C": "Луна",
+          "D": "Венера"
+        },
+        "optionsUz": {
+          "A": "Mars",
+          "B": "Quyosh",
+          "C": "Oy",
+          "D": "Venera"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "В каком году был запущен первый искусственный спутник Земли?",
+        "textUz": "Yerning ilk sun'iy yo'ldoshi nechanchi yilda uchirilgan?",
+        "optionsRu": {
+          "A": "1945",
+          "B": "1957",
+          "C": "1969",
+          "D": "1975"
+        },
+        "optionsUz": {
+          "A": "1945",
+          "B": "1957",
+          "C": "1969",
+          "D": "1975"
+        },
+        "correctOption": "B"
+      }
+    ]
+  },
+  {
+    "level": 6,
+    "label": "Rocketry",
+    "titleRu": "Mission: Rocketry",
+    "titleUz": "Missiya: Raketa",
+    "questions": [
+      {
+        "textRu": "Почему нос ракеты заострённый?",
+        "textUz": "Nima uchun raketaning burun qismi o'tkir uchli bo'ladi?",
+        "optionsRu": {
+          "A": "Чтобы легче проходить сквозь воздух",
+          "B": "Чтобы ловить сигналы из космоса",
+          "C": "Чтобы выдерживать удары",
+          "D": "Чтобы соединяться с другими ракетами"
+        },
+        "optionsUz": {
+          "A": "Havo qatlamini osonroq yorib o'tish uchun",
+          "B": "Koinotdan kelayotgan signallarni tutib olish uchun",
+          "C": "Zarbalarga bardosh berish uchun",
+          "D": "Boshqa raketalarga ulanish uchun"
+        },
+        "correctOption": "A"
+      },
+      {
+        "textRu": "Для чего ракете иллюминатор — круглое окно?",
+        "textUz": "Raketadagi illyuminator — dumaloq oyna nima uchun kerak?",
+        "optionsRu": {
+          "A": "Для вентиляции",
+          "B": "Чтобы космонавты могли наблюдать за полётом",
+          "C": "Для подачи топлива",
+          "D": "Для связи с Землёй"
+        },
+        "optionsUz": {
+          "A": "Ventilyatsiya uchun",
+          "B": "Kosmonavtlar parvozni kuzatishlari uchun",
+          "C": "Yoqilg'i uzatish uchun",
+          "D": "Yer bilan muloqot qilish uchun"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Внизу ракеты есть небольшие «плавники». Для чего они?",
+        "textUz": "Raketaning pastki qismida kichik «suzgichlar» bor. Ular nima uchun?",
+        "optionsRu": {
+          "A": "Для ускорения",
+          "B": "Для торможения",
+          "C": "Чтобы ракета летела ровно",
+          "D": "Для защиты двигателя"
+        },
+        "optionsUz": {
+          "A": "Tezlashtirish uchun",
+          "B": "Sekinlashtirish uchun",
+          "C": "Raketa bir tekis uchishi uchun",
+          "D": "Dvigatelni himoya qilish uchun"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "При взлёте ракета сильно нагревается. Что её защищает?",
+        "textUz": "Uchish paytida raketa kuchli qiziydi. Uni nima himoya qiladi?",
+        "optionsRu": {
+          "A": "Толстый слой металла",
+          "B": "Специальное жаропрочное покрытие",
+          "C": "Система охлаждения водой",
+          "D": "Обычная краска"
+        },
+        "optionsUz": {
+          "A": "Qalin metall qatlam",
+          "B": "Maxsus issiqlikka chidamli qoplama",
+          "C": "Suv bilan sovutish tizimi",
+          "D": "Oddiy bo'yoq"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Как ракетный двигатель создаёт силу для взлёта?",
+        "textUz": "Raketa dvigateli ko'tarish kuchi qanday hosil qiladi?",
+        "optionsRu": {
+          "A": "Вращает винт, как у самолёта",
+          "B": "Выбрасывает горячий газ вниз, и ракета летит вверх",
+          "C": "Отталкивается от воздуха",
+          "D": "Использует электричество"
+        },
+        "optionsUz": {
+          "A": "Samolyotdagidek vintni aylantiradi",
+          "B": "Pastga qizigan gaz chiqaradi va raketa yuqoriga ko'tariladi",
+          "C": "Havoni itaradi",
+          "D": "Elektr energiyasidan foydalanadi"
+        },
+        "correctOption": "B"
+      }
+    ]
+  },
+  {
+    "level": 7,
+    "label": "Solar System",
+    "titleRu": "Mission: Solar System",
+    "titleUz": "Missiya: Quyosh tizimi",
+    "questions": [
+      {
+        "textRu": "Сколько планет в Солнечной системе?",
+        "textUz": "Quyosh tizimida nechta sayyora bor?",
+        "optionsRu": {
+          "A": "6",
+          "B": "7",
+          "C": "8",
+          "D": "10"
+        },
+        "optionsUz": {
+          "A": "6",
+          "B": "7",
+          "C": "8",
+          "D": "10"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Какая планета ближе всего к Солнцу?",
+        "textUz": "Quyoshga eng yaqin sayyora qaysi?",
+        "optionsRu": {
+          "A": "Венера",
+          "B": "Земля",
+          "C": "Меркурий",
+          "D": "Марс"
+        },
+        "optionsUz": {
+          "A": "Venera",
+          "B": "Yer",
+          "C": "Merkuriy",
+          "D": "Mars"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Почему Марс называют «Красной планетой»?",
+        "textUz": "Nima uchun Marsni «Qizil sayyora» deyishadi?",
+        "optionsRu": {
+          "A": "Красная атмосфера",
+          "B": "Ржавчина на поверхности",
+          "C": "Близость к Солнцу",
+          "D": "Вулканическая лава"
+        },
+        "optionsUz": {
+          "A": "Qizil atmosfera",
+          "B": "Yuzasidagi zang",
+          "C": "Quyoshga yaqinligi",
+          "D": "Vulqon lavasi"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Какая планета самая большая в Солнечной системе?",
+        "textUz": "Quyosh tizimidagi eng katta sayyora qaysi?",
+        "optionsRu": {
+          "A": "Сатурн",
+          "B": "Нептун",
+          "C": "Юпитер",
+          "D": "Уран"
+        },
+        "optionsUz": {
+          "A": "Saturn",
+          "B": "Neptun",
+          "C": "Yupiter",
+          "D": "Uran"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "У какой планеты самые заметные кольца?",
+        "textUz": "Qaysi sayyorada eng ko'zga ko'rinadigan halqalar bor?",
+        "optionsRu": {
+          "A": "Юпитер",
+          "B": "Уран",
+          "C": "Нептун",
+          "D": "Сатурн"
+        },
+        "optionsUz": {
+          "A": "Yupiter",
+          "B": "Uran",
+          "C": "Neptun",
+          "D": "Saturn"
+        },
+        "correctOption": "D"
+      }
+    ]
+  },
+  {
+    "level": 8,
+    "label": "Moon Rover",
+    "titleRu": "Mission: Moon Rover",
+    "titleUz": "Missiya: Lunoxod",
+    "questions": [
+      {
+        "textRu": "Луноход — это первый аппарат, который ездил по поверхности другого небесного тела. Что он из себя представлял?",
+        "textUz": "Lunoxod — o'zga samoviy sayyora yuzasida harakatlangan birinchi apparat. U o'zi qanday ko'rinishda edi?",
+        "optionsRu": {
+          "A": "Робот на колёсах",
+          "B": "Летающий зонд",
+          "C": "Спускаемая капсула",
+          "D": "Орбитальная станция"
+        },
+        "optionsUz": {
+          "A": "G'ildirakli robot",
+          "B": "Uchuvchi zond",
+          "C": "Pastga tushiriladigan kapsula",
+          "D": "Orbital stansiya"
+        },
+        "correctOption": "A"
+      },
+      {
+        "textRu": "Луноход ехал по Луне, но кто им управлял?",
+        "textUz": "Lunoxod Oy sirti bo'ylab harakatlangan, lekin uni kim boshqargan?",
+        "optionsRu": {
+          "A": "Бортовой компьютер самостоятельно",
+          "B": "Космонавты на Луне",
+          "C": "Команда операторов с Земли",
+          "D": "Экипаж орбитального корабля"
+        },
+        "optionsUz": {
+          "A": "Bort kompyuteri mustaqil ravishda boshqargan",
+          "B": "Oydagi kosmonavtlar",
+          "C": "Yerdagi operatorlar jamoasi",
+          "D": "Orbital kema ekipaji"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Откуда Луноход получал энергию для работы?",
+        "textUz": "Lunoxod ishlash uchun quvvatni qayerdan olgan?",
+        "optionsRu": {
+          "A": "От батареек",
+          "B": "От солнечных панелей",
+          "C": "От ядерного реактора",
+          "D": "От топливного бака"
+        },
+        "optionsUz": {
+          "A": "Batareyalardan",
+          "B": "Quyosh panellaridan",
+          "C": "Yadro reaktoridan",
+          "D": "Yoqilg'i bakidan"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Луноход-1 должен был проработать 3 месяца. Что произошло на самом деле?",
+        "textUz": "Lunoxod-1 ning faoliyati uch oyga mo'ljallangan edi. Haqiqatda esa qanday holat yuz bergan?",
+        "optionsRu": {
+          "A": "Сломался через неделю",
+          "B": "Проработал почти 11 месяцев",
+          "C": "Работает до сих пор",
+          "D": "Проработал ровно 3 месяца"
+        },
+        "optionsUz": {
+          "A": "Bir haftadan keyin buzilib qolgan",
+          "B": "Qariyb 11 oy ishlagan",
+          "C": "Hozirgacha ishlayapti",
+          "D": "Aniq 3 oy ishlagan"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Что Луноход изучал на поверхности Луны?",
+        "textUz": "Lunoxod Oy sirtida nimani o'rgangan?",
+        "optionsRu": {
+          "A": "Атмосферу и ветер",
+          "B": "Лунный грунт и рельеф",
+          "C": "Воду и лёд",
+          "D": "Магнитное поле"
+        },
+        "optionsUz": {
+          "A": "Atmosfera va shamolni",
+          "B": "Oy tuprog'i va relyefini",
+          "C": "Suv va muzni",
+          "D": "Magnit maydonini"
+        },
+        "correctOption": "B"
+      }
+    ]
+  },
+  {
+    "level": 9,
+    "label": "Comets & Asteroids",
+    "titleRu": "Mission: Comets & Asteroids",
+    "titleUz": "Missiya: Kometa va asteroidlar",
+    "questions": [
+      {
+        "textRu": "Из чего в основном состоит комета?",
+        "textUz": "Kometalar tarkibi asosan nimalardan iborat?",
+        "optionsRu": {
+          "A": "Из камня и металла",
+          "B": "Из льда и пыли",
+          "C": "Из жидкой воды",
+          "D": "Из песка и глины"
+        },
+        "optionsUz": {
+          "A": "Tosh va metaldan",
+          "B": "Muz va changdan",
+          "C": "Suyuq suvdan",
+          "D": "Qum va loydan"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Что появляется у кометы, когда она приближается к Солнцу?",
+        "textUz": "Kometa Quyoshga yaqinlashganda unda nima paydo bo'ladi?",
+        "optionsRu": {
+          "A": "Кольца",
+          "B": "Хвост",
+          "C": "Крылья",
+          "D": "Тень"
+        },
+        "optionsUz": {
+          "A": "Halqalar",
+          "B": "Dum",
+          "C": "Qanotlar",
+          "D": "Soya"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Из чего состоит астероид?",
+        "textUz": "Asteroid nimadan tarkib topgan?",
+        "optionsRu": {
+          "A": "Из льда и пыли",
+          "B": "Из камня и металла",
+          "C": "Из газа и воды",
+          "D": "Из песка и глины"
+        },
+        "optionsUz": {
+          "A": "Muz va changdan",
+          "B": "Tosh va metalldan",
+          "C": "Gaz va suvdan",
+          "D": "Qum va gildan"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Где находится большинство астероидов в Солнечной системе?",
+        "textUz": "Quyosh tizimidagi eng ko'p asteroidlar qayerda joylashgan?",
+        "optionsRu": {
+          "A": "Между Землёй и Луной",
+          "B": "За Нептуном",
+          "C": "Между Марсом и Юпитером",
+          "D": "Рядом с Солнцем"
+        },
+        "optionsUz": {
+          "A": "Yer va Oy o'rtasida",
+          "B": "Neptun ortida",
+          "C": "Mars va Yupiter o'rtasida",
+          "D": "Quyosh yaqinida"
+        },
+        "correctOption": "C"
+      },
+      {
+        "textRu": "Какая знаменитая комета появляется рядом с Землёй примерно раз в 75 лет?",
+        "textUz": "Qaysi mashhur kometa Yer yaqinida taxminan har 75 yilda bir marta paydo bo'ladi?",
+        "optionsRu": {
+          "A": "Комета Энке",
+          "B": "Комета Хейла-Боппа",
+          "C": "Комета Галлея",
+          "D": "Комета Чурюмова"
+        },
+        "optionsUz": {
+          "A": "Enke kometasi",
+          "B": "Xeyl-Bopp kometasi",
+          "C": "Galley kometasi",
+          "D": "Churyumov kometasi"
+        },
+        "correctOption": "C"
+      }
+    ]
+  },
+  {
+    "level": 10,
+    "label": "Black Hole",
+    "titleRu": "Mission: Black Hole",
+    "titleUz": "Missiya: Qora tuynuk",
+    "questions": [
+      {
+        "textRu": "Что такое чёрная дыра?",
+        "textUz": "Qora tuynuk nima?",
+        "optionsRu": {
+          "A": "Пустое место в космосе",
+          "B": "Область, откуда не может выйти даже свет",
+          "C": "Тёмная планета",
+          "D": "Облако космической пыли"
+        },
+        "optionsUz": {
+          "A": "Koinotdagi bo'sh joy",
+          "B": "Yorug'lik ham chiqa olmaydigan hudud",
+          "C": "Zulmat sayyorasi",
+          "D": "Fazoviy chang buluti"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Что происходит с крупной звездой в конце её жизни?",
+        "textUz": "Katta yulduzning hayoti tugagandan so'ng u bilan nima sodir bo'ladi?",
+        "optionsRu": {
+          "A": "Она замерзает",
+          "B": "Она взрывается и сжимается в чёрную дыру",
+          "C": "Она становится планетой",
+          "D": "Она улетает из галактики"
+        },
+        "optionsUz": {
+          "A": "U muzlab qoladi",
+          "B": "U portlab, qora tuynukka aylanadi",
+          "C": "U sayyoraga aylanadi",
+          "D": "U galaktikadan uchib ketadi"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Как называется граница чёрной дыры, после которой ничто не может выйти обратно?",
+        "textUz": "Qora tuynukning hech narsa ortga qayta olmaydigan chegarasi nima deb ataladi?",
+        "optionsRu": {
+          "A": "Экватор",
+          "B": "Горизонт событий",
+          "C": "Орбита",
+          "D": "Атмосфера"
+        },
+        "optionsUz": {
+          "A": "Ekvator",
+          "B": "Voqealar gorizonti",
+          "C": "Orbita",
+          "D": "Atmosfera"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Что находится в центре нашей галактики Млечный Путь?",
+        "textUz": "Somon Yo'li galaktikamiz markazida nima joylashgan?",
+        "optionsRu": {
+          "A": "Огромная звезда",
+          "B": "Сверхмассивная чёрная дыра",
+          "C": "Гигантская планета",
+          "D": "Облако газа"
+        },
+        "optionsUz": {
+          "A": "Ulkan yulduz",
+          "B": "Yuqori massaga ega qora tuynuk",
+          "C": "Gigant sayyora",
+          "D": "Gaz buluti"
+        },
+        "correctOption": "B"
+      },
+      {
+        "textRu": "Можно ли увидеть чёрную дыру напрямую?",
+        "textUz": "Qora tuynukni to'g'ridan-to'g'ri ko'rish mumkinmi?",
+        "optionsRu": {
+          "A": "Да, она светится",
+          "B": "Да, если подлететь близко",
+          "C": "Нет, но учёные видят её влияние на окружающие объекты",
+          "D": "Нет, и её невозможно обнаружить"
+        },
+        "optionsUz": {
+          "A": "Ha, u nur sochadi",
+          "B": "Ha, agar unga yaqin uchib borilsa",
+          "C": "Yo'q, lekin olimlar uning atrofdagi jismlarga ta'sirini kuzatishadi",
+          "D": "Yo'q, uni aniqlash imkonsiz"
+        },
+        "correctOption": "C"
+      }
+    ]
+  }
+]

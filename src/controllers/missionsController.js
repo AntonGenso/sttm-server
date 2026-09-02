@@ -36,6 +36,42 @@ const parseCount = (value) => {
 };
 
 /**
+ * Missions are scheduled in Tashkent time and stored in UTC.
+ *
+ * The admin panel sends a full ISO timestamp, so the offset is already in the
+ * string; a bare `YYYY-MM-DDTHH:mm` (what a raw `datetime-local` input yields)
+ * is read as Tashkent wall time, since that is the only timezone the schedule
+ * is ever expressed in. Uzbekistan has had no DST since 1992, so the fixed
+ * +05:00 is exact.
+ *
+ * Returns `undefined` when the field was not sent (the date stays as it is),
+ * `null` for an empty one ("opens immediately"), `false` when it cannot be
+ * read, and a `YYYY-MM-DD HH:MM:SS` UTC string otherwise — the shape MySQL
+ * stores without re-interpreting it.
+ */
+const TASHKENT_OFFSET = "+05:00";
+
+const parseOpensAt = (value) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const raw = value.trim();
+  const local = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(raw);
+  const parsed = new Date(local ? `${raw}${TASHKENT_OFFSET}` : raw);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  return parsed.toISOString().slice(0, 19).replace("T", " ");
+};
+
+/**
  * The facts of a mission, sent as one JSON field beside the pictures.
  *
  * Shape per fact: `{ id?, titleRu, titleUz?, descriptionRu, descriptionUz?,
@@ -200,6 +236,13 @@ const createMission = async (req, res) => {
       return res.status(400).json({ message: "Unknown mission type" });
     }
 
+    const opensAt = parseOpensAt(req.body.opensAt);
+    if (opensAt === false) {
+      return res
+        .status(400)
+        .json({ message: "Opening date must be a valid date and time" });
+    }
+
     const gameLink = parseLink(req.body.gameLink);
     if (gameLink === false) {
       return res.status(400).json({ message: "Game link must be a valid URL" });
@@ -235,6 +278,7 @@ const createMission = async (req, res) => {
       xp,
       level,
       type,
+      opensAt,
       gameLink,
       bonusXp,
       facts: facts ?? [],
@@ -314,6 +358,17 @@ const updateMission = async (req, res) => {
       fields.isActive = ["1", "true"].includes(String(req.body.isActive))
         ? 1
         : 0;
+    }
+
+    // An empty value clears the date, so the field is honoured even when blank.
+    const opensAt = parseOpensAt(req.body.opensAt);
+    if (opensAt === false) {
+      return res
+        .status(400)
+        .json({ message: "Opening date must be a valid date and time" });
+    }
+    if (opensAt !== undefined) {
+      fields.opensAt = opensAt;
     }
 
     if (req.body.gameLink !== undefined) {

@@ -55,6 +55,13 @@ const ASSET_COLUMNS = {
 };
 
 /**
+ * `missions.opens_at` holds UTC, but a bare DATETIME would be re-interpreted by
+ * the driver in the Node process' timezone on the way out. Formatting it in SQL
+ * hands the client a plain ISO string instead, identical on every host.
+ */
+const OPENS_AT_SELECT = "DATE_FORMAT(m.opens_at, '%Y-%m-%dT%TZ') AS opens_at";
+
+/**
  * Facts of a mission, ready for the client: the text comes from the row, the
  * picture from the public bucket. Both locales are handed out — the game picks
  * one and falls back to Russian when the Uzbek text was left empty.
@@ -199,6 +206,7 @@ const getMissions = async () => {
   try {
     const [rows] = await pool.query(
       `SELECT m.id, m.name, m.label, m.xp, m.level, m.type, m.is_active, m.created_at,
+              ${OPENS_AT_SELECT},
               mi.cover_key,
               COALESCE(mi.video_key_ru, mi.video_key_uz, mi.video_key) AS video_key,
               mi.video_key_ru, mi.video_key_uz,
@@ -247,6 +255,7 @@ const getMissions = async () => {
 const getMissionById = async (id) => {
   const [rows] = await pool.query(
     `SELECT m.id, m.name, m.label, m.xp, m.level, m.type, m.is_active,
+            ${OPENS_AT_SELECT},
             m.created_at, m.updated_at,
             mi.game_link, mi.bonus_xp, mi.cover_key,
             mi.video_key_ru, mi.video_name_ru,
@@ -314,6 +323,7 @@ const getMissionById = async (id) => {
     level: mission.level,
     type: mission.type,
     is_active: mission.is_active,
+    opens_at: mission.opens_at,
     created_at: mission.created_at,
     updated_at: mission.updated_at,
     game_link: mission.game_link,
@@ -376,6 +386,7 @@ const createNewMission = async ({
   xp = 0,
   level = 0,
   type = "current",
+  opensAt = null,
   gameLink = null,
   bonusXp = 0,
   facts = [],
@@ -388,8 +399,8 @@ const createNewMission = async ({
     await connection.beginTransaction();
 
     const [result] = await connection.query(
-      "INSERT INTO missions (name, label, xp, level, type) VALUES (?, ?, ?, ?, ?)",
-      [name, label, xp, level, type],
+      "INSERT INTO missions (name, label, xp, level, type, opens_at) VALUES (?, ?, ?, ?, ?, ?)",
+      [name, label, xp, level, type, opensAt],
     );
     missionId = result.insertId;
 
@@ -515,6 +526,7 @@ const updateMission = async (
       level: "level",
       type: "type",
       isActive: "is_active",
+      opensAt: "opens_at",
     };
     const missionAssignments = Object.entries(missionColumns)
       .filter(([field]) => fields[field] !== undefined)

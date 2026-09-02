@@ -80,6 +80,10 @@ const upload = multer({
 
 const missionFiles = upload.fields(MISSION_FILE_FIELDS);
 
+/** A test form carries one file: its cover. */
+const TEST_FILE_FIELDS = [{ name: "cover", maxCount: 1 }];
+const testFiles = upload.fields(TEST_FILE_FIELDS);
+
 /**
  * Browsers send the file name as UTF-8 bytes, but multipart headers are parsed
  * as latin1 — «Инструкция.pdf» arrives as `ÐÐ½ÑÑÑÑÐºÑÐ¸Ñ.pdf`. Re-decoding
@@ -140,4 +144,5 @@ module.exports = {
   MAX_VIDEO_SIZE,
   MAX_FACTS,
   missionFiles: handleUploadErrors(missionFiles),
+  testFiles: handleUploadErrors(testFiles),
 };

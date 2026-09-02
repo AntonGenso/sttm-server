@@ -8,8 +8,14 @@ const minioClient = require("./minio");
 const PUBLIC_BUCKET = process.env.MINIO_PUBLIC_BUCKET || "sttm-public";
 const PRIVATE_BUCKET = process.env.MINIO_PRIVATE_BUCKET || "sttm-private";
 
-/** Prefixes inside the public bucket that anyone may GET. */
-const PUBLIC_PREFIXES = ["missions/", "skins/"];
+/**
+ * Prefixes inside the public bucket that anyone may GET.
+ *
+ * A new kind of public object needs its prefix listed here as well as uploaded:
+ * the bucket policy is what makes it readable, so an unlisted prefix uploads
+ * happily and then serves 403 to the browser.
+ */
+const PUBLIC_PREFIXES = ["missions/", "tests/", "skins/"];
 
 const useSSL = process.env.MINIO_USE_SSL === "true";
 

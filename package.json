@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "check:profanity": "node scripts/checkProfanity.js",
     "seed:cities": "node scripts/seedCities.js",
-    "seed:game": "node scripts/seedGameCatalog.js"
+    "seed:game": "node scripts/seedGameCatalog.js",
+    "seed:tests": "node scripts/seedTestsFromMessages.js"
   },
   "repository": {
     "type": "git",

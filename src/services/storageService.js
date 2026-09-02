@@ -139,6 +139,49 @@ const listByPrefix = (bucket, prefix) =>
     stream.on("error", reject);
   });
 
+/* ────────────────────────────── Test covers ─────────────────────────────── */
+
+/**
+ * A test carries one picture, its cover, and it is shown right on the card —
+ * so it lives in the public bucket, like a mission cover. Keys are built the
+ * same way: `tests/7/cover/9f3a....png`, from the test id and a fresh uuid, so
+ * a replacement never overwrites the file it replaces.
+ */
+const uploadTestCover = async ({ testId, file }) => {
+  await ensureBuckets();
+
+  const key = [
+    "tests",
+    String(testId),
+    "cover",
+    `${crypto.randomUUID()}${safeExtension(file.originalname)}`,
+  ].join("/");
+
+  await minioClient.putObject(PUBLIC_BUCKET, key, file.buffer, file.size, {
+    "Content-Type": file.mimetype || "application/octet-stream",
+    "Cache-Control": "public, max-age=31536000, immutable",
+  });
+
+  return key;
+};
+
+const removeTestCover = async (key) => {
+  if (!key) {
+    return;
+  }
+  await minioClient.removeObject(PUBLIC_BUCKET, key);
+};
+
+/** Everything stored under a test's prefix, orphans from failed uploads too. */
+const removeTestObjects = async (testId) => {
+  await ensureBuckets();
+
+  const keys = await listByPrefix(PUBLIC_BUCKET, `tests/${testId}/`);
+  if (keys.length) {
+    await minioClient.removeObjects(PUBLIC_BUCKET, keys);
+  }
+};
+
 /**
  * Wipes everything stored for a mission, in both buckets.
  *
@@ -165,6 +208,9 @@ module.exports = {
   uploadMissionAsset,
   removeMissionAsset,
   removeMissionObjects,
+  uploadTestCover,
+  removeTestCover,
+  removeTestObjects,
   getPublicUrl,
   getPrivateUrl,
 };
