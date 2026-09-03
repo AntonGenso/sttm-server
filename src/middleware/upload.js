@@ -19,13 +19,13 @@ const VIDEO_TYPES = [
   "video/x-matroska",
 ];
 
-const DOCUMENT_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-];
+/**
+ * Только PDF: конспект, презентация и инструкция выдаются подписанной ссылкой
+ * с `Content-Disposition: inline` (см. `getPrivateUrl` в storageService), а
+ * открыть во вкладке браузер умеет лишь PDF — doc/docx/ppt/pptx он вместо
+ * этого предлагает скачать.
+ */
+const DOCUMENT_TYPES = ["application/pdf"];
 
 /**
  * How many facts one mission may carry. The form sends a fact's picture as
