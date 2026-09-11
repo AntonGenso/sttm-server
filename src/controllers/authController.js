@@ -7,6 +7,7 @@ const { normalizePhone, PHONE_ERROR } = require("../utils/phone");
 const { validateName } = require("../utils/name");
 const { normalizeInviteCode, isValidInviteCode } = require("../utils/classes");
 const { isValidNickname, isProfaneNickname } = require("../utils/nickname");
+const { parseProfileInput } = require("../utils/profile");
 
 // Game PIN: exactly four digits. Students never type a full password, so the
 // account password is the PIN (hashed like any other).
@@ -61,10 +62,19 @@ const register = async (req, res) => {
       return res.status(400).json({ message: passwordError });
     }
 
+    // The city and the school are optional here: a teacher whose school is not
+    // in the directory yet still gets an account, and fills the profile in
+    // before creating their first class.
+    const profile = parseProfileInput(req.body);
+    if (profile.error) {
+      return res.status(400).json({ message: profile.error });
+    }
+
     const user = await services.registerUser(
       name.trim(),
       normalizedPhone,
       password,
+      profile.value,
     );
 
     res.status(201).json(await issueSession(user));
@@ -72,6 +82,10 @@ const register = async (req, res) => {
     console.error(error);
     if (error.status === 409) {
       return res.status(409).json({ message: error.message });
+    }
+    // A city or school that does not exist is the caller's mistake, not ours.
+    if (error.status === 400) {
+      return res.status(400).json({ message: error.message });
     }
     res.status(500).json({ message: "Error registering user" });
   }

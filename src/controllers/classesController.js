@@ -8,10 +8,6 @@ const {
   parseGrade,
   parseLetter,
 } = require("../utils/classes");
-const { containsProfanity } = require("../utils/profanity");
-
-const SCHOOL_NAME_MAX_LENGTH = 255;
-const CITY_NAME_MAX_LENGTH = 100;
 
 const getMyClasses = async (req, res) => {
   try {
@@ -23,32 +19,20 @@ const getMyClasses = async (req, res) => {
   }
 };
 
+/**
+ * Класс — это «класс + буква». Город и школа берутся из профиля учителя;
+ * `schoolId` в теле нужен только для класса в другой школе.
+ */
 const createClass = async (req, res) => {
   try {
-    const { cityName, schoolName, grade, letter } = req.body;
+    const { schoolId, grade, letter } = req.body;
 
-    if (typeof cityName !== "string" || !cityName.trim()) {
-      return res.status(400).json({ message: "City is required" });
-    }
-    if (cityName.trim().length > CITY_NAME_MAX_LENGTH) {
-      return res.status(400).json({
-        message: `City name must be at most ${CITY_NAME_MAX_LENGTH} characters long`,
-      });
-    }
-
-    if (typeof schoolName !== "string" || !schoolName.trim()) {
-      return res.status(400).json({ message: "School name is required" });
-    }
-    if (schoolName.trim().length > SCHOOL_NAME_MAX_LENGTH) {
-      return res.status(400).json({
-        message: `School name must be at most ${SCHOOL_NAME_MAX_LENGTH} characters long`,
-      });
-    }
-
-    if (containsProfanity(cityName) || containsProfanity(schoolName)) {
-      return res.status(400).json({
-        message: "City or school name contains inappropriate language",
-      });
+    let targetSchoolId;
+    if (schoolId !== undefined && schoolId !== null && schoolId !== "") {
+      targetSchoolId = Number(schoolId);
+      if (!Number.isInteger(targetSchoolId) || targetSchoolId <= 0) {
+        return res.status(400).json({ message: "Invalid school" });
+      }
     }
 
     const parsedGrade = parseGrade(grade);
@@ -67,8 +51,7 @@ const createClass = async (req, res) => {
 
     const result = await services.createClass({
       teacherId: req.user.id,
-      cityName: cityName.trim(),
-      schoolName: schoolName.trim(),
+      schoolId: targetSchoolId,
       grade: parsedGrade,
       letter: parsedLetter.letter,
       alphabet: parsedLetter.alphabet,
@@ -78,7 +61,11 @@ const createClass = async (req, res) => {
   } catch (error) {
     console.error(error);
     if (error.status) {
-      return res.status(error.status).json({ message: error.message });
+      // `PROFILE_INCOMPLETE` — это не «неверные данные», а «профиль не заполнен»:
+      // приложение по этому коду открывает выбор города и школы, а не подсвечивает поле.
+      return res
+        .status(error.status)
+        .json({ message: error.message, code: error.code });
     }
     res.status(500).json({ message: "Error creating class" });
   }

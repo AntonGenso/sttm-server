@@ -58,17 +58,6 @@ const parseLetter = (value) => {
   return null;
 };
 
-/**
- * Key for the school unique index: «Школа №12», "школа 12" and "  Школа  № 12 "
- * all collapse to `школа 12`, so the same school is not created twice.
- */
-const normalizeSchoolName = (value) =>
-  value
-    .toLowerCase()
-    .replace(/[№#"'`»«.,]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
 module.exports = {
   CODE_LENGTH,
   GRADE_MIN,
@@ -78,5 +67,4 @@ module.exports = {
   isValidInviteCode,
   parseGrade,
   parseLetter,
-  normalizeSchoolName,
 };

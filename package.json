@@ -7,6 +7,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "check:profanity": "node scripts/checkProfanity.js",
+    "fix:dictionaries": "node scripts/fixDictionaries.js",
     "seed:cities": "node scripts/seedCities.js",
     "seed:game": "node scripts/seedGameCatalog.js",
     "seed:tests": "node scripts/seedTestsFromMessages.js"

@@ -1,6 +1,6 @@
 const pool = require("../config/db");
 const schoolsService = require("./schoolsService");
-const citiesService = require("./citiesService");
+const profileService = require("./profileService");
 const { generateInviteCode } = require("../utils/classes");
 
 /** Random codes collide rarely; the unique index decides, we just try again. */
@@ -43,28 +43,39 @@ const recordInviteCode = async (connection, classId, code) => {
   );
 };
 
-const createClass = async ({
-  teacherId,
-  cityName,
-  schoolName,
-  grade,
-  letter,
-  alphabet,
-}) => {
+/**
+ * Заводит класс в школе учителя.
+ *
+ * Город и школа сюда больше не приходят строками: они лежат в профиле, и класс
+ * — это только «класс + буква». `schoolId` передаётся, лишь когда учитель
+ * осознанно создаёт класс в другой школе (совместители и методисты); профиль
+ * при этом не меняется.
+ *
+ * Пустой профиль — это не ошибка сервера и не молчаливое создание города
+ * наугад: 400 с кодом `PROFILE_INCOMPLETE`, по которому приложение открывает
+ * выбор города и школы.
+ */
+const createClass = async ({ teacherId, schoolId, grade, letter, alphabet }) => {
+  const profile = await profileService.getProfile(teacherId);
+  const targetSchoolId = schoolId ?? profile?.school_id ?? null;
+
+  if (!targetSchoolId) {
+    const error = new Error("Select your city and school before creating a class");
+    error.status = 400;
+    error.code = "PROFILE_INCOMPLETE";
+    throw error;
+  }
+
+  const school = await schoolsService.getSchoolById(targetSchoolId);
+  if (!school) {
+    const error = new Error("School not found");
+    error.status = 400;
+    throw error;
+  }
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-
-    // Cities are typed by hand, so the one the teacher entered is found or
-    // created first — its id is what the school is then scoped to.
-    const city = await citiesService.getOrCreateCity(cityName, connection);
-
-    const school = await schoolsService.getOrCreateSchool(
-      city.id,
-      schoolName,
-      teacherId,
-      connection,
-    );
 
     let classId = null;
     let joinCode = null;

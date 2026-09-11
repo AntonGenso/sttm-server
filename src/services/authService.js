@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const pool = require("../config/db");
 const rolesService = require("./rolesService");
+const profileService = require("./profileService");
 
 const SALT_ROUNDS = 10;
 
@@ -20,24 +21,49 @@ const findUserById = async (id) => {
 };
 
 /**
- * Loads the auth view of a user by id, roles included. Used by /auth/refresh so
- * every rotated access token carries the roles as they are in the DB *now* —
- * this is what lets a freshly granted teacher role take effect without a manual
- * re-login.
+ * The single shape of "the signed-in user" — returned by register, login and
+ * refresh alike. The city and the school are part of it because the panel gates
+ * class creation on them: it has to know whether the profile is complete
+ * without a second request after every token rotation.
  */
-const getAuthUserById = async (id) => {
-  const user = await findUserById(id);
-  if (!user) {
+const toAuthUser = (profile, roles) => ({
+  id: profile.id,
+  name: profile.name,
+  phone: profile.phone ?? null,
+  roles,
+  cityId: profile.city_id ?? null,
+  cityName: profile.city_name ?? null,
+  schoolId: profile.school_id ?? null,
+  schoolName: profile.school_name ?? null,
+});
+
+const getAuthUser = async (userId) => {
+  const profile = await profileService.getProfile(userId);
+  if (!profile) {
     const error = new Error("User not found");
     error.status = 401;
     throw error;
   }
-
-  const roles = await rolesService.getUserRoleNames(user.id);
-  return { id: user.id, name: user.name, phone: user.phone ?? null, roles };
+  const roles = await rolesService.getUserRoleNames(userId);
+  return toAuthUser(profile, roles);
 };
 
-const registerUser = async (name, phone, password) => {
+/**
+ * Loads the auth view of a user by id, roles included. Used by /auth/refresh so
+ * every rotated access token carries the roles as they are in the DB *now* —
+ * this is what lets a freshly granted teacher role take effect without a manual
+ * re-login, and what keeps a just-filled-in profile from needing one either.
+ */
+const getAuthUserById = (id) => getAuthUser(id);
+
+/**
+ * Creates the account and, if the form carried them, its city and school.
+ *
+ * Both are optional on purpose: a teacher whose school is not in the directory
+ * yet still gets an account. `classesService` is what refuses to create a class
+ * until they are filled in.
+ */
+const registerUser = async (name, phone, password, profile = {}) => {
   const existing = await findUserByName(name);
   if (existing) {
     const error = new Error("User with this name already exists");
@@ -55,17 +81,27 @@ const registerUser = async (name, phone, password) => {
       "INSERT INTO users (name, phone, password) VALUES (?, ?, ?)",
       [name, phone, passwordHash],
     );
+    const userId = result.insertId;
 
     const role = await rolesService.getOrCreateRoleByName(
       DEFAULT_ROLE_NAME,
       DEFAULT_ROLE_LABEL,
       connection,
     );
-    await rolesService.assignRoleToUser(result.insertId, role.id, connection);
+    await rolesService.assignRoleToUser(userId, role.id, connection);
 
+    // A school the teacher typed here is created the same way as anywhere else:
+    // unverified, and waiting for the admin to confirm or merge it.
+    const resolved = await profileService.resolveCityAndSchool(profile, {
+      userId,
+      executor: connection,
+    });
+    await profileService.writeCityAndSchool(userId, resolved, connection);
+
+    const created = await profileService.getProfile(userId, connection);
     await connection.commit();
 
-    return { id: result.insertId, name, phone, roles: [role.name] };
+    return toAuthUser(created, [role.name]);
   } catch (error) {
     await connection.rollback();
 
@@ -97,14 +133,13 @@ const loginUser = async (name, password) => {
     throw error;
   }
 
-  const roles = await rolesService.getUserRoleNames(user.id);
-
-  return { id: user.id, name: user.name, phone: user.phone ?? null, roles };
+  return getAuthUser(user.id);
 };
 
 module.exports = {
   findUserByName,
   findUserById,
+  getAuthUser,
   getAuthUserById,
   registerUser,
   loginUser,

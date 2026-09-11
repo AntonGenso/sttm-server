@@ -3,6 +3,10 @@ const pool = require("../config/db");
 /**
  * Counters for the admin dashboard, gathered in a single round trip.
  *
+ * `unverified_schools` is the queue, not a statistic: schools a teacher typed in
+ * wait there for the admin to confirm or merge them, and the tile is the only
+ * place that queue is visible.
+ *
  * Teachers and students are counted by granted role, so an account that holds
  * both is counted in both — the numbers answer "how many accounts can do X",
  * not "how many people are registered".
@@ -22,6 +26,8 @@ const getOverview = async () => {
          (SELECT COUNT(*) FROM missions)                          AS missions,
          (SELECT COUNT(*) FROM classes)                           AS classes,
          (SELECT COUNT(*) FROM schools)                           AS schools,
+         (SELECT COUNT(*) FROM schools WHERE is_verified = 0)      AS unverified_schools,
+         (SELECT COUNT(*) FROM cities WHERE is_active = 1)         AS cities,
          (SELECT COUNT(*) FROM class_students
            WHERE status <> 'removed')                             AS enrollments,
          (SELECT COUNT(*) FROM users)                             AS users`,
