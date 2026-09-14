@@ -78,11 +78,49 @@ const updateSkin = async (req, res) => {
   }
 };
 
+/** Longest name fragment the board will search for. */
+const SEARCH_MAX_LENGTH = 64;
+
 const getLeaderboard = async (req, res) => {
   try {
-    const classId = req.query.classId ? parseId(req.query.classId) : null;
-    const entries = await services.getLeaderboard({ classId });
-    res.json(entries);
+    const page = parseId(req.query.page) ?? 1;
+    const requested = parseId(req.query.pageSize);
+    const pageSize = Math.min(
+      requested ?? services.LEADERBOARD_PAGE_SIZE,
+      services.LEADERBOARD_MAX_PAGE_SIZE,
+    );
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim().slice(0, SEARCH_MAX_LENGTH)
+        : "";
+
+    // `scope=class` is the student's own class, looked up from the token. An
+    // explicit `classId` stays supported for callers that already know one.
+    let classId = null;
+    if (req.query.scope === "class") {
+      classId = await services.getOwnClassId(req.user.id);
+      if (!classId) {
+        // Not in any class: an empty board is the honest answer, not the
+        // global one the filter was meant to narrow.
+        return res.json({
+          entries: [],
+          page: 1,
+          pageSize,
+          total: 0,
+          totalPages: 1,
+        });
+      }
+    } else if (req.query.classId) {
+      classId = parseId(req.query.classId);
+    }
+
+    const result = await services.getLeaderboard({
+      classId,
+      search,
+      page,
+      pageSize,
+    });
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error fetching leaderboard" });

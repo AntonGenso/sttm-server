@@ -373,41 +373,119 @@ const updateSkin = async (userId, headId, suitId) => {
 
 /* ───────────────────────── Leaderboard ───────────────────────── */
 
+/** Page size when the caller doesn't ask for one, and the ceiling it may ask for. */
+const LEADERBOARD_PAGE_SIZE = 50;
+const LEADERBOARD_MAX_PAGE_SIZE = 100;
+
 /**
- * Top students by total, newest-highest first. When `classId` is given, scopes
- * to that class through `class_students`; otherwise it is global.
+ * The class the student currently belongs to, or null when they joined none.
+ *
+ * This is what backs the "my class" filter: the class is resolved from the
+ * caller's own id, never from a class id the client sends, so a student can
+ * only ever scope the board to a class they are actually in.
  */
-const getLeaderboard = async ({ classId = null, limit = 100 } = {}) => {
-  const params = [];
-  let scope = "";
-  if (classId) {
-    scope = `JOIN class_students cs
-               ON cs.student_id = u.id
-              AND cs.class_id = ?
-              AND cs.status <> 'removed'`;
-    params.push(classId);
-  }
-  params.push(limit);
+const getOwnClassId = async (userId) => {
+  const [[row]] = await pool.query(
+    `SELECT class_id
+       FROM class_students
+      WHERE student_id = ? AND status <> 'removed'
+      ORDER BY joined_at DESC
+      LIMIT 1`,
+    [userId],
+  );
+  return row ? row.class_id : null;
+};
+
+/** `%` and `_` are LIKE wildcards; a name search must match them literally. */
+const escapeLike = (value) => value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+
+/**
+ * One page of the board, highest total first. `classId` scopes it to a class
+ * through `class_students`; `search` keeps only the names containing it.
+ *
+ * `position` is the row's place in the *unfiltered* board (within the scope),
+ * computed the same way `classesService` computes `class_rank` — so searching
+ * for a name shows where that student really stands, not where they landed in
+ * the filtered list. Ties are broken by name, matching the ORDER BY, which is
+ * what keeps the numbers on a page consecutive.
+ */
+const getLeaderboard = async ({
+  classId = null,
+  search = "",
+  page = 1,
+  pageSize = LEADERBOARD_PAGE_SIZE,
+} = {}) => {
+  // The scope join is needed twice — once for the rows, once inside the
+  // position subquery — so that a class board is numbered 1..N within the class.
+  const scopeFor = (userAlias, csAlias) =>
+    classId
+      ? `JOIN class_students ${csAlias}
+                 ON ${csAlias}.student_id = ${userAlias}.id
+                AND ${csAlias}.class_id = ?
+                AND ${csAlias}.status <> 'removed'`
+      : "";
+
+  const filter = search ? "WHERE u.name LIKE ?" : "";
+  const like = search ? `%${escapeLike(search)}%` : null;
+
+  const countParams = [];
+  if (classId) countParams.push(classId);
+  if (search) countParams.push(like);
+
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total
+       FROM game_profiles gp
+       JOIN users u ON u.id = gp.user_id
+       ${scopeFor("u", "cs")}
+      ${filter}`,
+    countParams,
+  );
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(Math.max(page, 1), totalPages);
+  const offset = (current - 1) * pageSize;
+
+  // The position subquery sits in the SELECT list, so its parameter comes
+  // before the ones belonging to FROM / WHERE / LIMIT.
+  const rowParams = [];
+  if (classId) rowParams.push(classId, classId);
+  if (search) rowParams.push(like);
+  rowParams.push(pageSize, offset);
 
   const [rows] = await pool.query(
     `SELECT u.id, u.name AS nickname,
             gp.head_id, gp.suit_id,
-            gp.stars, gp.score, gp.total
+            gp.stars, gp.score, gp.total,
+            (SELECT COUNT(*) + 1
+               FROM game_profiles pgp
+               JOIN users pu ON pu.id = pgp.user_id
+               ${scopeFor("pu", "pcs")}
+              WHERE pgp.total > gp.total
+                 OR (pgp.total = gp.total AND pu.name < u.name)) AS position
        FROM game_profiles gp
        JOIN users u ON u.id = gp.user_id
-       ${scope}
+       ${scopeFor("u", "cs")}
+      ${filter}
       ORDER BY gp.total DESC, u.name ASC
-      LIMIT ?`,
-    params,
+      LIMIT ? OFFSET ?`,
+    rowParams,
   );
 
-  return rows.map((r) => ({
-    nickname: r.nickname,
-    skin: { headId: r.head_id, suitId: r.suit_id },
-    stars: r.stars,
-    score: r.score,
-    total: r.total,
-  }));
+  return {
+    entries: rows.map((r) => ({
+      nickname: r.nickname,
+      skin: { headId: r.head_id, suitId: r.suit_id },
+      stars: r.stars,
+      score: r.score,
+      total: r.total,
+      position: Number(r.position),
+    })),
+    page: current,
+    pageSize,
+    /** Rows matching the current scope and search, across every page. */
+    total,
+    totalPages,
+  };
 };
 
 module.exports = {
@@ -418,4 +496,7 @@ module.exports = {
   submitItem,
   updateSkin,
   getLeaderboard,
+  getOwnClassId,
+  LEADERBOARD_PAGE_SIZE,
+  LEADERBOARD_MAX_PAGE_SIZE,
 };
