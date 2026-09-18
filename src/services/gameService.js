@@ -320,19 +320,26 @@ const submitItem = async (kind, userId, itemId, newScore) => {
 
     // Create the row if start was never called, then keep the higher score.
     // Each completed submission counts as one attempt (a replay / retake).
+    //
+    // `completed_at` tracks the latest run, `first_completed_at` the first one
+    // and never moves again — the pilot report asks when a class first finished
+    // a test, and a retake must not push that date forward.
     await connection.query(
-      `INSERT INTO ${table} (user_id, ${column}, status, best_score, attempts, completed_at)
-       VALUES (?, ?, 'done', ?, 1, NOW())
+      `INSERT INTO ${table}
+         (user_id, ${column}, status, best_score, attempts,
+          completed_at, first_completed_at)
+       VALUES (?, ?, 'done', ?, 1, NOW(), NOW())
        ON DUPLICATE KEY UPDATE
-         best_score   = GREATEST(best_score, VALUES(best_score)),
-         status       = 'done',
-         attempts     = attempts + 1,
-         completed_at = NOW()`,
+         best_score         = GREATEST(best_score, VALUES(best_score)),
+         status             = 'done',
+         attempts           = attempts + 1,
+         completed_at       = NOW(),
+         first_completed_at = COALESCE(first_completed_at, NOW())`,
       [userId, itemId, newScore],
     );
 
     // Close the latest open attempt (if any) with the reported score.
-    await connection.query(
+    const [closed] = await connection.query(
       `UPDATE game_attempts
           SET score = ?, finished_at = NOW()
         WHERE user_id = ? AND kind = ? AND item_id = ? AND finished_at IS NULL
@@ -341,10 +348,22 @@ const submitItem = async (kind, userId, itemId, newScore) => {
       [newScore, userId, kind, itemId],
     );
 
+    // No open attempt means start was never called — which is what the game
+    // actually does, so without this the log would stay empty and every
+    // completion would go unrecorded. Write the attempt as already finished.
+    if (closed.affectedRows === 0) {
+      await connection.query(
+        `INSERT INTO game_attempts (user_id, kind, item_id, score, finished_at)
+         VALUES (?, ?, ?, ?, NOW())`,
+        [userId, kind, itemId, newScore],
+      );
+    }
+
     const totals = await recomputeTotals(userId, connection);
 
     const [[row]] = await connection.query(
-      `SELECT ${column} AS item_id, status, best_score, attempts, started_at, completed_at
+      `SELECT ${column} AS item_id, status, best_score, attempts,
+              started_at, first_completed_at, completed_at
          FROM ${table} WHERE user_id = ? AND ${column} = ?`,
       [userId, itemId],
     );

@@ -441,10 +441,35 @@ const deleteMission = async (req, res) => {
   }
 };
 
+/**
+ * Открытие презентации: отдаёт подписанную ссылку и записывает событие.
+ *
+ * Отвечает `{ url }`, а не редиректом: подписанная ссылка живёт недолго, и
+ * браузер не должен её кэшировать в истории переходов.
+ */
+const openTeacherGuide = async (req, res) => {
+  try {
+    const result = await services.openTeacherGuide(
+      req.params.id,
+      req.params.locale,
+      // Только из токена: чьё это открытие, решает сессия, а не клиент.
+      req.user.id,
+    );
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    if (error.status) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Error opening mission presentation" });
+  }
+};
+
 module.exports = {
   createMission,
   getMissions,
   getMission,
+  openTeacherGuide,
   updateMission,
   deleteMission,
 };

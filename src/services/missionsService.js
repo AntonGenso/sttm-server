@@ -279,15 +279,8 @@ const getMissionById = async (id) => {
     throw error;
   }
 
-  const [
-    documentRu,
-    documentUz,
-    teacherGuideRu,
-    teacherGuideUz,
-    lessonNotesRu,
-    lessonNotesUz,
-    facts,
-  ] = await Promise.all([
+  const [documentRu, documentUz, lessonNotesRu, lessonNotesUz, facts] =
+    await Promise.all([
     storageService.getPrivateUrl(
       mission.document_link_ru,
       mission.document_name_ru,
@@ -295,14 +288,6 @@ const getMissionById = async (id) => {
     storageService.getPrivateUrl(
       mission.document_link_uz,
       mission.document_name_uz,
-    ),
-    storageService.getPrivateUrl(
-      mission.teacher_guide_ru,
-      mission.teacher_guide_name_ru,
-    ),
-    storageService.getPrivateUrl(
-      mission.teacher_guide_uz,
-      mission.teacher_guide_name_uz,
     ),
     storageService.getPrivateUrl(
       mission.lesson_notes_ru,
@@ -345,9 +330,19 @@ const getMissionById = async (id) => {
       ru: { url: documentRu, name: mission.document_name_ru },
       uz: { url: documentUz, name: mission.document_name_uz },
     },
+    // Никакой ссылки: презентацию выдаёт `openTeacherGuide`, и только он, —
+    // иначе открытие можно было бы совершить в обход счётчика и отчёт по
+    // пилоту занижал бы «урок проведён». Здесь остаётся лишь то, что нужно
+    // отрисовать карточку и форму редактирования.
     teacher_guide: {
-      ru: { url: teacherGuideRu, name: mission.teacher_guide_name_ru },
-      uz: { url: teacherGuideUz, name: mission.teacher_guide_name_uz },
+      ru: {
+        available: Boolean(mission.teacher_guide_ru),
+        name: mission.teacher_guide_name_ru,
+      },
+      uz: {
+        available: Boolean(mission.teacher_guide_uz),
+        name: mission.teacher_guide_name_uz,
+      },
     },
     lesson_notes: {
       ru: { url: lessonNotesRu, name: mission.lesson_notes_name_ru },
@@ -355,6 +350,68 @@ const getMissionById = async (id) => {
     },
     facts,
   };
+};
+
+/** Локали, на которых существует презентация. */
+const GUIDE_LOCALES = ["ru", "uz"];
+
+/**
+ * Выдаёт подписанную ссылку на презентацию миссии и записывает открытие.
+ *
+ * Единственный способ получить эту ссылку: карточка миссии её больше не
+ * содержит. Ссылка и событие рождаются в одном вызове, поэтому «учитель открыл
+ * презентацию» нельзя совершить мимо счётчика — на этом держится колонка
+ * «дата первого открытия» в отчёте по пилоту.
+ *
+ * Запись события не должна мешать уроку: если INSERT упал, учитель всё равно
+ * получает ссылку, а ошибка уходит в лог сервера. Недосчитанное открытие —
+ * меньшее зло, чем презентация, не открывшаяся перед классом.
+ */
+const openTeacherGuide = async (missionId, locale, userId) => {
+  if (!GUIDE_LOCALES.includes(locale)) {
+    const error = new Error("Unknown locale");
+    error.status = 400;
+    throw error;
+  }
+
+  const [[mission]] = await pool.query(
+    `SELECT m.id,
+            mi.teacher_guide_${locale}      AS guide_key,
+            mi.teacher_guide_name_${locale} AS guide_name
+       FROM missions m
+       LEFT JOIN mission_info mi ON mi.mission_id = m.id
+      WHERE m.id = ?`,
+    [missionId],
+  );
+
+  if (!mission) {
+    const error = new Error("Mission not found");
+    error.status = 404;
+    throw error;
+  }
+
+  if (!mission.guide_key) {
+    const error = new Error("Mission has no presentation for this locale");
+    error.status = 404;
+    throw error;
+  }
+
+  const url = await storageService.getPrivateUrl(
+    mission.guide_key,
+    mission.guide_name,
+  );
+
+  await pool
+    .query(
+      `INSERT INTO mission_guide_opens (user_id, mission_id, locale)
+       VALUES (?, ?, ?)`,
+      [userId, missionId, locale],
+    )
+    .catch((error) =>
+      console.error("Failed to log mission guide open", error),
+    );
+
+  return { url, name: mission.guide_name };
 };
 
 /** Deletes the mission row (cascading to `mission_info`) and its objects. */
@@ -656,6 +713,7 @@ const deleteMission = async (missionId) => {
 };
 
 module.exports = {
+  openTeacherGuide,
   createNewMission,
   getMissions,
   getMissionById,

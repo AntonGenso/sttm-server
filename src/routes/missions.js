@@ -8,6 +8,15 @@ router.get("/", missionsController.getMissions);
 // Signed document links are handed out here, so the caller must be known.
 router.get("/:id", authenticate, missionsController.getMission);
 
+// Презентация миссии. Отдельный маршрут, а не поле в карточке: выдача ссылки
+// и запись «учитель открыл презентацию» — одно действие (см. openTeacherGuide).
+// Роль не проверяется: презентацию открывают учителя, ради них счётчик и заведён.
+router.get(
+  "/:id/teacher-guide/:locale",
+  authenticate,
+  missionsController.openTeacherGuide,
+);
+
 // Teachers only read the mission list; changing one is an admin action.
 router.post(
   "/",

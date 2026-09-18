@@ -1,5 +1,6 @@
 const express = require("express");
 const adminController = require("../controllers/adminController");
+const pilotController = require("../controllers/pilotController");
 const { authenticate, requireRole } = require("../middleware/auth");
 
 const router = express.Router();
@@ -40,6 +41,11 @@ router.get("/cities/:id", adminController.getCity);
 router.patch("/cities/:id", adminController.updateCity);
 router.post("/cities/:id/merge", adminController.mergeCity);
 router.delete("/cities/:id", adminController.deleteCity);
+
+// Сводка по пилоту: одна строка — один класс. Читает по всем учителям сразу,
+// поэтому живёт здесь, под общей admin-проверкой роутера.
+router.get("/pilot-report", pilotController.getReport);
+router.get("/pilot-report.csv", pilotController.getReportCsv);
 
 router.get("/enrollments", adminController.getEnrollments);
 // Soft removal, like the teacher-facing one: the membership ends, the student's
