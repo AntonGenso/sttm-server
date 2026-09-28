@@ -14,6 +14,7 @@ const classesRouter = require("./routes/classes");
 const statsRouter = require("./routes/stats");
 const adminRouter = require("./routes/admin");
 const gameRouter = require("./routes/game");
+const legalRouter = require("./routes/legal");
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use("/classes", classesRouter);
 app.use("/stats", statsRouter);
 app.use("/admin", adminRouter);
 app.use("/game", gameRouter);
+app.use("/legal", legalRouter);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Router not found" });

@@ -11,17 +11,27 @@ const STUDENT_ROLE_LABEL = "Student";
 /* ───────────────────────── Registration ───────────────────────── */
 
 /**
- * Registers a game student: creates the account, marks it as `student`, joins
- * the class the invite code points at, and opens an empty game profile — all in
- * one transaction so a half-registered student is never left behind.
+ * Registers a game student: creates the account, marks it as `student`, opens an
+ * empty game profile and, if an invite code came with the form, joins that class
+ * — all in one transaction so a half-registered student is never left behind.
+ *
+ * Код класса необязателен: ребёнок может прийти в игру раньше, чем учитель
+ * раздаст код, и упираться в него на регистрации — значит терять ученика. Без
+ * кода аккаунт заводится «сам по себе»: играть можно, в классе он не состоит и
+ * в отчёт по учителю не попадает, пока не войдёт по коду.
+ *
+ * Пустой код и неверный код — разные вещи: первый допустим, второй по-прежнему
+ * 404, иначе опечатка молча создавала бы ученика вне класса.
  *
  * `nickname` is expected already lower-cased by the caller (the game logs in
  * with the same lower-cased value, so the unique `users.name` stays consistent).
  */
 const registerStudent = async (nickname, pin, inviteCode) => {
   // Read-only checks first, so we don't create a user only to roll it back.
-  const targetClass = await classesService.findClassByInviteCode(inviteCode);
-  if (!targetClass) {
+  const targetClass = inviteCode
+    ? await classesService.findClassByInviteCode(inviteCode)
+    : null;
+  if (inviteCode && !targetClass) {
     const error = new Error("Invite code not found");
     error.status = 404;
     throw error;
@@ -55,12 +65,14 @@ const registerStudent = async (nickname, pin, inviteCode) => {
 
     // Re-entering after removal reactivates the membership instead of failing
     // on the unique index — same rule as the teacher-side join.
-    await connection.query(
-      `INSERT INTO class_students (class_id, student_id, status)
-       VALUES (?, ?, 'active')
-       ON DUPLICATE KEY UPDATE status = 'active'`,
-      [targetClass.id, userId],
-    );
+    if (targetClass) {
+      await connection.query(
+        `INSERT INTO class_students (class_id, student_id, status)
+         VALUES (?, ?, 'active')
+         ON DUPLICATE KEY UPDATE status = 'active'`,
+        [targetClass.id, userId],
+      );
+    }
 
     await connection.query(
       "INSERT INTO game_profiles (user_id) VALUES (?)",
@@ -74,12 +86,15 @@ const registerStudent = async (nickname, pin, inviteCode) => {
       name: nickname,
       phone: null,
       roles: [role.name],
-      class: {
-        id: targetClass.id,
-        grade: targetClass.grade,
-        letter: targetClass.letter,
-        school_name: targetClass.school_name,
-      },
+      // null — зарегистрировался без кода; класс появится, когда войдёт по нему.
+      class: targetClass
+        ? {
+            id: targetClass.id,
+            grade: targetClass.grade,
+            letter: targetClass.letter,
+            school_name: targetClass.school_name,
+          }
+        : null,
     };
   } catch (error) {
     await connection.rollback();

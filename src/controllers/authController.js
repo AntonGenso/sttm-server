@@ -2,6 +2,8 @@ const jwt = require("jsonwebtoken");
 const services = require("../services/authService");
 const gameService = require("../services/gameService");
 const refreshTokenService = require("../services/refreshTokenService");
+const legalService = require("../services/legalService");
+const { isLegalEnabled } = require("../config/legal");
 const { validatePassword } = require("../utils/password");
 const { normalizePhone, PHONE_ERROR } = require("../utils/phone");
 const { validateName } = require("../utils/name");
@@ -37,6 +39,25 @@ const issueSession = async (user) => {
   return { user, token, refreshToken };
 };
 
+/**
+ * Согласие с правилами и политикой при регистрации.
+ *
+ * Пока документы не опубликованы, механизм выключен и поле не спрашивается
+ * вовсе — клиенты его даже не показывают. Как только адреса и версия появятся
+ * в окружении, регистрация без галочки перестанет проходить, причём на
+ * сервере: клиент может и соврать.
+ *
+ * Возвращает текст ошибки или null, если всё в порядке.
+ */
+const requireLegalConsent = (body) => {
+  if (!isLegalEnabled()) {
+    return null;
+  }
+  return body?.termsAccepted === true
+    ? null
+    : "Terms and privacy policy must be accepted";
+};
+
 const register = async (req, res) => {
   try {
     const { name, phone, password } = req.body;
@@ -70,12 +91,24 @@ const register = async (req, res) => {
       return res.status(400).json({ message: profile.error });
     }
 
+    const consent = requireLegalConsent(req.body);
+    if (consent) {
+      return res.status(400).json({ message: consent });
+    }
+
     const user = await services.registerUser(
       name.trim(),
       normalizedPhone,
       password,
       profile.value,
     );
+
+    // Согласие пишется сразу после создания аккаунта, а не внутри регистрации:
+    // так и учитель, и ученик проходят через одну и ту же запись, и добавление
+    // нового способа регистрации не забудет про согласие.
+    if (isLegalEnabled()) {
+      await legalService.accept(user.id);
+    }
 
     res.status(201).json(await issueSession(user));
   } catch (error) {
@@ -134,16 +167,28 @@ const registerStudent = async (req, res) => {
       return res.status(400).json({ message: "PIN must be exactly 4 digits" });
     }
 
+    // Код класса необязателен. Присланный пустым — регистрация «сама по себе»;
+    // присланный с опечаткой — по-прежнему ошибка, иначе ученик молча оказался
+    // бы вне класса и учитель не понял бы, куда он делся.
     const code = normalizeInviteCode(classCode);
-    if (!isValidInviteCode(code)) {
+    if (code && !isValidInviteCode(code)) {
       return res.status(400).json({ message: "Invalid class code" });
+    }
+
+    const consent = requireLegalConsent(req.body);
+    if (consent) {
+      return res.status(400).json({ message: consent });
     }
 
     const user = await gameService.registerStudent(
       nickname.trim().toLowerCase(),
       pin,
-      code,
+      code || null,
     );
+
+    if (isLegalEnabled()) {
+      await legalService.accept(user.id);
+    }
 
     res.status(201).json(await issueSession(user));
   } catch (error) {

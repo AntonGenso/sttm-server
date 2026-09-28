@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const pool = require("../config/db");
 const rolesService = require("./rolesService");
 const profileService = require("./profileService");
+const legalService = require("./legalService");
 
 const SALT_ROUNDS = 10;
 
@@ -35,6 +36,15 @@ const toAuthUser = (profile, roles) => ({
   cityName: profile.city_name ?? null,
   schoolId: profile.school_id ?? null,
   schoolName: profile.school_name ?? null,
+  /**
+   * Принял ли человек действующую редакцию правил. Приезжает вместе с сессией,
+   * а не отдельным запросом: клиент показывает блокирующее окно сразу после
+   * входа, и лишний круг до сервера означал бы кадр работающего приложения,
+   * которым пользоваться ещё нельзя.
+   *
+   * Пока документов нет, механизм выключен и здесь всегда true.
+   */
+  termsAccepted: legalService.isAccepted(profile),
 });
 
 const getAuthUser = async (userId) => {

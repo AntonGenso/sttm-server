@@ -30,7 +30,9 @@ const PROFILE_SELECT = `
          ci.name_ru AS city_name,
          u.school_id,
          s.name        AS school_name,
-         s.is_verified AS school_is_verified
+         s.is_verified AS school_is_verified,
+         u.terms_accepted_at,
+         u.terms_version
     FROM users u
     LEFT JOIN cities  ci ON ci.id = u.city_id
     LEFT JOIN schools s  ON s.id = u.school_id
