@@ -401,17 +401,53 @@ const openTeacherGuide = async (missionId, locale, userId) => {
     mission.guide_name,
   );
 
-  await pool
-    .query(
-      `INSERT INTO mission_guide_opens (user_id, mission_id, locale)
-       VALUES (?, ?, ?)`,
-      [userId, missionId, locale],
-    )
-    .catch((error) =>
-      console.error("Failed to log mission guide open", error),
-    );
+  await logTeacherEvent("guide", missionId, userId, locale);
 
   return { url, name: mission.guide_name };
+};
+
+/**
+ * Пишет событие учителя по миссии. Не должно мешать уроку: упавший INSERT
+ * уходит в лог сервера, а учитель продолжает работать. Недосчитанное событие —
+ * меньшее зло, чем презентация, не открывшаяся перед классом.
+ */
+const logTeacherEvent = async (kind, missionId, userId, locale = null) => {
+  await pool
+    .query(
+      `INSERT INTO mission_teacher_events (user_id, mission_id, kind, locale)
+       VALUES (?, ?, ?, ?)`,
+      [userId, missionId, kind, locale],
+    )
+    .catch((error) =>
+      console.error(`Failed to log teacher event ${kind}`, error),
+    );
+};
+
+/**
+ * «Начать урок»: прямой сигнал того, что учитель приступил к миссии.
+ *
+ * Отдельное событие от открытия презентации — её открывают и накануне, при
+ * подготовке, а кнопку жмут на уроке. Класс не спрашивается: её жмут в списке
+ * миссий, где класс не выбран.
+ *
+ * Пишется каждое нажатие, в отчёт идёт самое раннее — так «дата начала» не
+ * зависит от того, сколько раз учитель вернулся к миссии.
+ */
+const startLesson = async (missionId, userId) => {
+  const [[mission]] = await pool.query(
+    "SELECT id FROM missions WHERE id = ?",
+    [missionId],
+  );
+
+  if (!mission) {
+    const error = new Error("Mission not found");
+    error.status = 404;
+    throw error;
+  }
+
+  await logTeacherEvent("lesson", missionId, userId);
+
+  return { ok: true };
 };
 
 /** Deletes the mission row (cascading to `mission_info`) and its objects. */
@@ -713,6 +749,7 @@ const deleteMission = async (missionId) => {
 };
 
 module.exports = {
+  startLesson,
   openTeacherGuide,
   createNewMission,
   getMissions,

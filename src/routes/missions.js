@@ -17,6 +17,11 @@ router.get(
   missionsController.openTeacherGuide,
 );
 
+// «Начать урок». POST, а не GET: запись события — изменение, и браузер не
+// должен повторять её при возврате назад. Роль не проверяется, как и у
+// презентации: урок начинают учителя.
+router.post("/:id/lesson-start", authenticate, missionsController.startLesson);
+
 // Teachers only read the mission list; changing one is an admin action.
 router.post(
   "/",

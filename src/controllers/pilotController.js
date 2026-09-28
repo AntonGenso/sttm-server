@@ -39,9 +39,13 @@ const getReport = async (req, res) => {
 };
 
 /**
- * Тот же отчёт файлом. Заголовок каждой миссии повторяет её номер во всех трёх
+ * Тот же отчёт файлом. Заголовок каждой миссии повторяет её номер во всех
  * колонках — в CSV нет объединённых ячеек, а без номера в каждой колонке
- * тридцать столбцов подряд не читаются.
+ * четыре десятка столбцов подряд не читаются.
+ *
+ * Разбивки «не прошли / не открывали» здесь намеренно нет: она нужна поимённо,
+ * а не числом, и живёт на странице отчёта, где по ней можно провалиться в
+ * состав класса.
  */
 const getReportCsv = async (req, res) => {
   try {
@@ -60,6 +64,7 @@ const getReportCsv = async (req, res) => {
     report.missions.forEach((mission) => {
       const prefix = `M${mission.level} ${mission.label}`;
       header.push(
+        `${prefix} — урок начат`,
         `${prefix} — презентация`,
         `${prefix} — завершили тест`,
         `${prefix} — первый тест`,
@@ -81,6 +86,7 @@ const getReportCsv = async (req, res) => {
 
       row.missions.forEach((mission) => {
         cells.push(
+          formatDate(mission.lesson_started_at),
           formatDate(mission.guide_opened_at),
           mission.students_done,
           formatDate(mission.first_completed_at),
@@ -106,9 +112,28 @@ const getReportCsv = async (req, res) => {
   }
 };
 
+/** Поимённые списки за одной клеткой отчёта: класс × миссия. */
+const getClassMissionStudents = async (req, res) => {
+  try {
+    res.json(
+      await pilotService.getClassMissionStudents(
+        req.params.classId,
+        req.params.missionId,
+      ),
+    );
+  } catch (error) {
+    console.error(error);
+    if (error.status) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Error building class breakdown" });
+  }
+};
+
 module.exports = {
   getReport,
   getReportCsv,
+  getClassMissionStudents,
   // Наружу ради тестов форматирования.
   formatDate,
   formatPercent,

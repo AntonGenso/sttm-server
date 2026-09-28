@@ -465,7 +465,21 @@ const openTeacherGuide = async (req, res) => {
   }
 };
 
+/** «Начать урок»: отмечает, что учитель приступил к миссии. */
+const startLesson = async (req, res) => {
+  try {
+    res.json(await services.startLesson(req.params.id, req.user.id));
+  } catch (error) {
+    console.error(error);
+    if (error.status) {
+      return res.status(error.status).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Error starting lesson" });
+  }
+};
+
 module.exports = {
+  startLesson,
   createMission,
   getMissions,
   getMission,

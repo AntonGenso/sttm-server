@@ -46,6 +46,11 @@ router.delete("/cities/:id", adminController.deleteCity);
 // поэтому живёт здесь, под общей admin-проверкой роутера.
 router.get("/pilot-report", pilotController.getReport);
 router.get("/pilot-report.csv", pilotController.getReportCsv);
+// За числом в клетке отчёта — поимённый состав: кто прошёл, кто нет.
+router.get(
+  "/pilot-report/classes/:classId/missions/:missionId",
+  pilotController.getClassMissionStudents,
+);
 
 router.get("/enrollments", adminController.getEnrollments);
 // Soft removal, like the teacher-facing one: the membership ends, the student's

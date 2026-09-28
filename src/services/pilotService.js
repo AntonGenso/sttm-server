@@ -78,12 +78,12 @@ const fetchCompletions = async () => {
   const [rows] = await pool.query(
     `SELECT cs.class_id,
             m.id AS mission_id,
-            COUNT(DISTINCT st.user_id)  AS students_done,
-            MIN(st.first_completed_at)  AS first_done
+            SUM(st.status =  'done') AS students_done,
+            SUM(st.status <> 'done') AS students_in_progress,
+            MIN(CASE WHEN st.status = 'done' THEN st.first_completed_at END)
+              AS first_done
        FROM class_students cs
-       JOIN student_tests st
-              ON st.user_id = cs.student_id
-             AND st.completed_at IS NOT NULL
+       JOIN student_tests st ON st.user_id = cs.student_id
        JOIN missions m ON m.test_id = st.test_id
       WHERE cs.status <> 'removed'
         AND ${MISSION_SCOPE}
@@ -92,16 +92,23 @@ const fetchCompletions = async () => {
   return rows;
 };
 
-/** Первое открытие презентации в разрезе (учитель, миссия). */
-const fetchGuideOpens = async () => {
+/**
+ * Первое событие каждого вида в разрезе (учитель, миссия).
+ *
+ * `lesson` — нажал «Начать урок», прямой признак начала урока. `guide` —
+ * открыл презентацию; это могло случиться и накануне, при подготовке, поэтому
+ * два вида не смешиваются в одну дату.
+ */
+const fetchTeacherEvents = async () => {
   const [rows] = await pool.query(
-    `SELECT o.user_id AS teacher_id,
-            o.mission_id,
-            MIN(o.opened_at) AS first_open
-       FROM mission_guide_opens o
-       JOIN missions m ON m.id = o.mission_id
+    `SELECT e.user_id AS teacher_id,
+            e.mission_id,
+            e.kind,
+            MIN(e.opened_at) AS first_at
+       FROM mission_teacher_events e
+       JOIN missions m ON m.id = e.mission_id
       WHERE ${MISSION_SCOPE}
-      GROUP BY o.user_id, o.mission_id`,
+      GROUP BY e.user_id, e.mission_id, e.kind`,
   );
   return rows;
 };
@@ -112,12 +119,16 @@ const classLabel = (row) => `${row.grade}${row.letter}`;
 /** Ключ составной карты; шаблонная строка, чтобы 1×23 не слиплось с 12×3. */
 const pairKey = (left, right) => `${left}:${right}`;
 
-const buildReport = ({ classes, missions, completions, guideOpens }) => {
+const buildReport = ({ classes, missions, completions, teacherEvents }) => {
   const doneBy = new Map(
     completions.map((row) => [pairKey(row.class_id, row.mission_id), row]),
   );
-  const openBy = new Map(
-    guideOpens.map((row) => [pairKey(row.teacher_id, row.mission_id), row]),
+  // Ключ включает вид события: у одной пары (учитель, миссия) их два.
+  const eventBy = new Map(
+    teacherEvents.map((row) => [
+      `${row.kind}:${pairKey(row.teacher_id, row.mission_id)}`,
+      row,
+    ]),
   );
 
   const rows = classes.map((klass) => {
@@ -125,15 +136,31 @@ const buildReport = ({ classes, missions, completions, guideOpens }) => {
 
     const perMission = missions.map((mission) => {
       const done = doneBy.get(pairKey(klass.id, mission.id));
-      const open = openBy.get(pairKey(klass.teacher_id, mission.id));
+      const pair = pairKey(klass.teacher_id, mission.id);
+      const guide = eventBy.get(`guide:${pair}`);
+      const lesson = eventBy.get(`lesson:${pair}`);
+
       const studentsDone = done ? Number(done.students_done) : 0;
+      const studentsInProgress = done ? Number(done.students_in_progress) : 0;
 
       return {
         mission_id: mission.id,
         level: mission.level,
         label: mission.label ?? mission.name,
-        guide_opened_at: open ? open.first_open : null,
+        lesson_started_at: lesson ? lesson.first_at : null,
+        guide_opened_at: guide ? guide.first_at : null,
         students_done: studentsDone,
+        /**
+         * Начал тест, но не закончил. Пока всегда 0: игра не сообщает о старте
+         * (`startItem` не вызывается), и строка прогресса появляется только в
+         * момент сдачи. Заполнится, когда игра начнёт отмечать старт.
+         */
+        students_in_progress: studentsInProgress,
+        /** Остальные из подключённых — те, кто к тесту не приступал. */
+        students_not_started: Math.max(
+          connected - studentsDone - studentsInProgress,
+          0,
+        ),
         first_completed_at: done ? done.first_done : null,
       };
     });
@@ -184,18 +211,102 @@ const buildReport = ({ classes, missions, completions, guideOpens }) => {
 };
 
 const getReport = async () => {
-  const [classes, missions, completions, guideOpens] = await Promise.all([
+  const [classes, missions, completions, teacherEvents] = await Promise.all([
     fetchClasses(),
     fetchMissions(),
     fetchCompletions(),
-    fetchGuideOpens(),
+    fetchTeacherEvents(),
   ]);
 
-  return buildReport({ classes, missions, completions, guideOpens });
+  return buildReport({ classes, missions, completions, teacherEvents });
+};
+
+/**
+ * Поимённо: кто из класса прошёл тест миссии, кто начал и не закончил, кто не
+ * приступал. За числами в отчёте всегда должны стоять фамилии — иначе по ним
+ * нельзя ничего сделать.
+ *
+ * Отдельным запросом, а не внутри отчёта: списки нужны по одной клетке за раз,
+ * а в отчёте их было бы полторы тысячи.
+ */
+const getClassMissionStudents = async (classId, missionId) => {
+  const [[mission]] = await pool.query(
+    `SELECT m.id, m.level, m.label, m.name, m.test_id
+       FROM missions m WHERE m.id = ?`,
+    [missionId],
+  );
+  if (!mission) {
+    const error = new Error("Mission not found");
+    error.status = 404;
+    throw error;
+  }
+
+  const [[klass]] = await pool.query(
+    `SELECT c.id, c.grade, c.letter, s.name AS school_name,
+            u.name AS teacher_name
+       FROM classes c
+       JOIN schools s ON s.id = c.school_id
+       JOIN users   u ON u.id = c.teacher_id
+      WHERE c.id = ?`,
+    [classId],
+  );
+  if (!klass) {
+    const error = new Error("Class not found");
+    error.status = 404;
+    throw error;
+  }
+
+  // Весь состав класса, а не только те, у кого есть прогресс: «не приступал» —
+  // это и есть отсутствие строки в student_tests.
+  const [students] = await pool.query(
+    `SELECT u.id,
+            u.name,
+            COALESCE(st.status, 'none') AS status,
+            st.best_score,
+            st.attempts,
+            st.first_completed_at
+       FROM class_students cs
+       JOIN users u ON u.id = cs.student_id
+       LEFT JOIN student_tests st
+              ON st.user_id = u.id AND st.test_id = ?
+      WHERE cs.class_id = ? AND cs.status <> 'removed'
+      ORDER BY st.first_completed_at IS NULL, st.first_completed_at, u.name`,
+    [mission.test_id, classId],
+  );
+
+  return {
+    class: {
+      id: klass.id,
+      label: `${klass.grade}${klass.letter}`,
+      school_name: klass.school_name,
+      teacher_name: klass.teacher_name,
+    },
+    mission: {
+      id: mission.id,
+      level: mission.level,
+      label: mission.label ?? mission.name,
+      has_test: Boolean(mission.test_id),
+    },
+    students: students.map((row) => ({
+      id: row.id,
+      name: row.name,
+      /** done — прошёл, in_progress — начал и не закончил, none — не приступал. */
+      bucket:
+        row.status === "done"
+          ? "done"
+          : row.status === "none"
+            ? "none"
+            : "in_progress",
+      best_score: row.best_score,
+      attempts: row.attempts,
+      first_completed_at: row.first_completed_at,
+    })),
+  };
 };
 
 module.exports = {
   getReport,
+  getClassMissionStudents,
   // Наружу ради тестов и отладки на живых данных.
   buildReport,
 };
