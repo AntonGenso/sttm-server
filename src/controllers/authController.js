@@ -4,6 +4,7 @@ const gameService = require("../services/gameService");
 const refreshTokenService = require("../services/refreshTokenService");
 const legalService = require("../services/legalService");
 const { isLegalEnabled } = require("../config/legal");
+const consentService = require("../services/consentService");
 const { validatePassword } = require("../utils/password");
 const { normalizePhone, PHONE_ERROR } = require("../utils/phone");
 const { validateName } = require("../utils/name");
@@ -83,6 +84,15 @@ const register = async (req, res) => {
       return res.status(400).json({ message: passwordError });
     }
 
+    // Правила участия и Политика конфиденциальности — две отдельные галочки,
+    // без обеих аккаунт не создаётся.
+    if (req.body.acceptRules !== true || req.body.acceptPrivacy !== true) {
+      return res.status(400).json({
+        message: "Rules and privacy policy must be accepted",
+        code: "CONSENT_REQUIRED",
+      });
+    }
+
     // The city and the school are optional here: a teacher whose school is not
     // in the directory yet still gets an account, and fills the profile in
     // before creating their first class.
@@ -101,6 +111,7 @@ const register = async (req, res) => {
       normalizedPhone,
       password,
       profile.value,
+      consentService.requestMeta(req),
     );
 
     // Согласие пишется сразу после создания аккаунта, а не внутри регистрации:

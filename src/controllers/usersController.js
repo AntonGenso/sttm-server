@@ -1,6 +1,7 @@
 const services = require("../services/usersService");
 const authService = require("../services/authService");
 const profileService = require("../services/profileService");
+const consentService = require("../services/consentService");
 const { parseProfileInput } = require("../utils/profile");
 
 const getUsers = async (req, res) => {
@@ -59,9 +60,41 @@ const updateMyProfile = async (req, res) => {
   }
 };
 
+/** Какие документы программы пользователь ещё не подтвердил. */
+const getMyConsents = async (req, res) => {
+  try {
+    const pending = await consentService.getPendingDocuments(req.user.id);
+    res.json({ pending, versions: consentService.CURRENT_VERSIONS });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching consents" });
+  }
+};
+
+/** Подтверждение из всплывающего окна кабинета: только обе галочки сразу. */
+const acceptMyConsents = async (req, res) => {
+  try {
+    if (req.body.acceptRules !== true || req.body.acceptPrivacy !== true) {
+      return res.status(400).json({
+        message: "Rules and privacy policy must be accepted",
+        code: "CONSENT_REQUIRED",
+      });
+    }
+
+    await consentService.acceptAll(req.user.id, consentService.requestMeta(req));
+    const pending = await consentService.getPendingDocuments(req.user.id);
+    res.json({ pending, versions: consentService.CURRENT_VERSIONS });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error saving consents" });
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
   getMyProfile,
   updateMyProfile,
+  getMyConsents,
+  acceptMyConsents,
 };

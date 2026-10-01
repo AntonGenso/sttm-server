@@ -3,6 +3,7 @@ const pool = require("../config/db");
 const rolesService = require("./rolesService");
 const profileService = require("./profileService");
 const legalService = require("./legalService");
+const consentService = require("./consentService");
 
 const SALT_ROUNDS = 10;
 
@@ -73,7 +74,13 @@ const getAuthUserById = (id) => getAuthUser(id);
  * yet still gets an account. `classesService` is what refuses to create a class
  * until they are filled in.
  */
-const registerUser = async (name, phone, password, profile = {}) => {
+const registerUser = async (
+  name,
+  phone,
+  password,
+  profile = {},
+  consentMeta = {},
+) => {
   const existing = await findUserByName(name);
   if (existing) {
     const error = new Error("User with this name already exists");
@@ -107,6 +114,10 @@ const registerUser = async (name, phone, password, profile = {}) => {
       executor: connection,
     });
     await profileService.writeCityAndSchool(userId, resolved, connection);
+
+    // Регистрация возможна только с обеими галочками (проверено в контроллере),
+    // поэтому согласие пишется в той же транзакции, что и сам аккаунт.
+    await consentService.acceptAll(userId, consentMeta, connection);
 
     const created = await profileService.getProfile(userId, connection);
     await connection.commit();
